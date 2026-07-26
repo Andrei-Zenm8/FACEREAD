@@ -3,30 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FaceRead | Deep Spectrum Matrix V5.0</title>
+    <title>FaceRead | Titan Engine V7.0</title>
     
+    <!-- MediaPipe Neural Network Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     
     <style>
-        :root { --brand: #00FF41; --bg: #000000; --panel: #0A0A0A; --text: #E0E0E0; --alert: #FF003C; --muted: #2A2A2A; --highlight: #008F11; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        /* CORE UI ARCHITECTURE */
+        :root { 
+            --brand: #00FF41; 
+            --bg: #030303; 
+            --panel: #0A0A0A; 
+            --text: #E0E0E0; 
+            --alert: #FF003C; 
+            --muted: #2A2A2A; 
+            --highlight: #008F11; 
+            --font-main: 'Courier New', Courier, monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-main); }
         body { background-color: var(--bg); color: var(--text); padding: 15px; font-size: 13px; overflow-x: hidden; }
+        
         header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--muted); padding-bottom: 15px; }
         h1 { color: var(--brand); letter-spacing: 2px; font-size: 24px; margin-bottom: 5px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0,255,65,0.3); }
-        
+        .sub-header { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* UPLOAD & EXECUTION MATRIX */
         .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
         .upload-btn { background: #050505; color: var(--brand); border: 1px solid var(--brand); padding: 12px 5px; text-align: center; text-transform: uppercase; cursor: pointer; font-size: 11px; font-weight: bold; transition: all 0.2s ease; }
         .upload-btn:hover { background: var(--brand); color: #000; }
         input[type="file"] { display: none; }
         
-        #executeBtn { width: 100%; background: var(--alert); color: #FFF; border: none; padding: 18px; font-size: 16px; font-weight: bold; text-transform: uppercase; cursor: pointer; margin-bottom: 20px; display: none; letter-spacing: 3px; box-shadow: 0 0 10px rgba(255,0,60,0.4); }
-        #executeBtn:hover { background: #CC002A; }
+        #executeBtn { width: 100%; background: var(--alert); color: #FFF; border: none; padding: 18px; font-size: 16px; font-weight: bold; text-transform: uppercase; cursor: pointer; margin-bottom: 20px; display: none; letter-spacing: 3px; box-shadow: 0 0 10px rgba(255,0,60,0.4); transition: 0.3s; }
+        #executeBtn:hover { background: #CC002A; transform: scale(0.99); }
 
+        /* VISION TENSORS */
         .vision-container { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; }
         .canvas-wrapper { position: relative; min-width: 150px; flex: 1; border: 1px solid var(--muted); background: #050505; min-height: 150px; }
         canvas { width: 100%; height: auto; display: block; filter: contrast(1.2) grayscale(0.2); }
         .angle-label { position: absolute; top: 2px; left: 4px; color: var(--brand); font-size: 10px; background: rgba(0,0,0,0.8); padding: 2px 4px; z-index: 10; border: 1px solid var(--brand); }
         
+        /* DATA REPORTING PANELS */
         .report-panel { background: var(--panel); display: none; margin-top: 10px; }
         .report-header { text-align: center; padding: 20px; border: 1px solid var(--muted); background: #050505; margin-bottom: 20px; color: var(--brand); font-weight: bold; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; }
         
@@ -35,42 +51,47 @@
         .trait-name { font-weight: bold; color: #FFF; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; }
         .trait-id { color: #555; font-size: 10px; }
         
-        .trait-body { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        /* DYNAMIC PROGRESS BARS */
         .data-bar-bg { width: 100%; height: 8px; background: #111; border: 1px solid #333; position: relative; margin-top: 5px; }
         .data-bar-fill { height: 100%; background: var(--brand); position: absolute; top: 0; left: 0; transition: width 1s ease-in-out; }
-        .data-bar-marker { position: absolute; top: -4px; width: 2px; height: 16px; background: #FFF; z-index: 2; }
+        .data-bar-marker { position: absolute; top: -4px; width: 2px; height: 16px; background: #FFF; z-index: 2; box-shadow: 0 0 5px #FFF; }
         
+        /* TEXT CONTAINERS */
+        .trait-body { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
         .geometry-box { border-left: 2px solid var(--highlight); padding-left: 10px; font-size: 11px; color: #888; background: rgba(0,143,17,0.05); padding: 8px 10px; }
-        .reading-box { font-size: 14px; line-height: 1.6; color: #E0E0E0; text-shadow: 0 1px 1px #000; padding: 10px; background: #111; border: 1px dashed #333; }
+        .reading-box { font-size: 14px; line-height: 1.6; color: #E0E0E0; padding: 12px; background: #111; border: 1px dashed #333; letter-spacing: 0.5px; }
         
-        .tier-label { font-size: 10px; text-transform: uppercase; font-weight: bold; padding: 3px 6px; display: inline-block; margin-bottom: 5px; }
-        .tier-extreme-low { background: #003366; color: #88CCFF; }
-        .tier-low { background: #222; color: #AAA; }
-        .tier-moderate { background: #333; color: #FFF; }
-        .tier-high { background: #440000; color: #FF6666; }
-        .tier-extreme-high { background: var(--alert); color: #FFF; animation: pulse 2s infinite; }
+        /* DYNAMIC TIER LABELS */
+        .tier-label { font-size: 11px; text-transform: uppercase; font-weight: bold; padding: 4px 8px; display: inline-block; margin-bottom: 5px; border-radius: 2px; letter-spacing: 1px; }
+        .tier-extreme-low { background: #003366; color: #88CCFF; border: 1px solid #88CCFF; }
+        .tier-low { background: #222; color: #AAA; border: 1px solid #555; }
+        .tier-moderate { background: #333; color: #FFF; border: 1px solid #777; }
+        .tier-high { background: #440000; color: #FF6666; border: 1px solid #FF6666; }
+        .tier-extreme-high { background: var(--alert); color: #FFF; border: 1px solid #FFF; animation: pulse 2s infinite; }
         
-        .metric-val { align-self: flex-start; background: #000; border: 1px solid var(--brand); padding: 4px 8px; font-family: monospace; color: var(--brand); font-size: 12px; }
+        .metric-val { align-self: flex-start; background: #000; border: 1px solid var(--brand); padding: 5px 10px; font-family: monospace; color: var(--brand); font-size: 12px; margin-top: 5px; }
         
         #loading { text-align: center; color: var(--alert); display: none; font-weight: bold; margin: 30px 0; font-size: 16px; letter-spacing: 2px; animation: blink 0.8s infinite; }
-        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(255,0,60,0.4);} 70% {box-shadow: 0 0 0 5px rgba(255,0,60,0);} 100% {box-shadow: 0 0 0 0 rgba(255,0,60,0);} }
+        
+        /* ANIMATIONS */
+        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(255,0,60,0.6);} 70% {box-shadow: 0 0 0 6px rgba(255,0,60,0);} 100% {box-shadow: 0 0 0 0 rgba(255,0,60,0);} }
         @keyframes blink { 0%, 100% {opacity: 1;} 50% {opacity: 0.2;} }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>FaceRead // Engine V5.0</h1>
-        <p style="color: #666; font-size: 11px; text-transform: uppercase;">Continuous Spectrum Variable Matrix [No Pre-Built Limits]</p>
+        <h1>FaceRead // Titan Engine V7.0</h1>
+        <p class="sub-header">16-Point Continuous Spectrum Matrix [Mood Evaluator Active]</p>
     </header>
 
     <div class="upload-grid">
-        <label class="upload-btn" id="lbl-front">Front Image<input type="file" id="up-front" accept="image/*"></label>
-        <label class="upload-btn" id="lbl-left">L-Profile<input type="file" id="up-left" accept="image/*"></label>
-        <label class="upload-btn" id="lbl-right">R-Profile<input type="file" id="up-right" accept="image/*"></label>
+        <label class="upload-btn" id="lbl-front">Front_Upload<input type="file" id="up-front" accept="image/*"></label>
+        <label class="upload-btn" id="lbl-left">L_Profile_Upload<input type="file" id="up-left" accept="image/*"></label>
+        <label class="upload-btn" id="lbl-right">R_Profile_Upload<input type="file" id="up-right" accept="image/*"></label>
     </div>
 
-    <button id="executeBtn">Initiate Deep Analysis</button>
+    <button id="executeBtn">Initiate Titan Matrix</button>
 
     <div class="vision-container">
         <div class="canvas-wrapper"><div class="angle-label">FRONT_VCTR</div><canvas id="canv-front"></canvas></div>
@@ -78,14 +99,15 @@
         <div class="canvas-wrapper"><div class="angle-label">R_VCTR</div><canvas id="canv-right"></canvas></div>
     </div>
     
-    <div id="loading">COMPILING 3D TENSORS...</div>
+    <div id="loading">COMPILING 3D TENSORS & MOOD VECTORS...</div>
     
     <div class="report-panel" id="report">
-        <div class="report-header">Subject Profile Extracted</div>
+        <div class="report-header">Titan Profile Extracted</div>
         <div id="report-grid"></div>
     </div>
 
 <script>
+    // --- I. CORE DOM DOM INITIALIZATION ---
     const inputs = { front: document.getElementById('up-front'), left: document.getElementById('up-left'), right: document.getElementById('up-right') };
     const canvases = { front: document.getElementById('canv-front'), left: document.getElementById('canv-left'), right: document.getElementById('canv-right') };
     const executeBtn = document.getElementById('executeBtn');
@@ -98,17 +120,20 @@
     let processingQueue = [];
     let currentAngle = null;
 
-    // CNN Initialization - Confidence dropped to 0.05 to force extreme angle captures
+    // --- II. MEDIAPIPE CNN CONFIGURATION ---
+    // Dropped confidence limits to 0.05 to force extreme 60-degree angle captures
     const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
     faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.05, minTrackingConfidence: 0.05 });
     faceMesh.onResults(handleResults);
 
+    // --- III. IMAGE UPLOAD & CANVAS RENDERING ---
     Object.keys(inputs).forEach(angle => {
         inputs[angle].addEventListener('change', (e) => {
             const file = e.target.files[0];
             if(!file) return;
             document.getElementById(`lbl-${angle}`).style.background = '#222';
             document.getElementById(`lbl-${angle}`).style.color = '#FFF';
+            document.getElementById(`lbl-${angle}`).innerText = `${angle.toUpperCase()}_LOADED`;
             
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -128,6 +153,7 @@
         });
     });
 
+    // --- IV. EXECUTION PIPELINE ---
     executeBtn.addEventListener('click', () => {
         executeBtn.style.display = 'none';
         reportPanel.style.display = 'none';
@@ -140,14 +166,14 @@
         if (processingQueue.length === 0) {
             loading.style.display = 'none';
             executeBtn.style.display = 'block';
-            executeBtn.innerText = "RECALIBRATE";
+            executeBtn.innerText = "RECALCULATE TITAN MATRIX";
             buildSpectrumMatrix();
             return;
         }
         currentAngle = processingQueue.shift();
         loading.innerText = `EXTRACTING [${currentAngle.toUpperCase()}] SPATIAL DATA...`;
         try { await faceMesh.send({image: sourceImages[currentAngle]}); } 
-        catch (err) { meshData[currentAngle] = null; processNext(); }
+        catch (err) { console.warn(`CNN lost track on ${currentAngle}`); meshData[currentAngle] = null; processNext(); }
     }
 
     function handleResults(results) {
@@ -157,52 +183,51 @@
             const canv = canvases[currentAngle];
             const ctx = canv.getContext('2d');
             ctx.strokeStyle = currentAngle === 'front' ? 'rgba(0, 255, 65, 0.8)' : 'rgba(255, 0, 60, 0.8)'; 
-            ctx.lineWidth = 1.2;
+            ctx.lineWidth = 1.0;
             lm.forEach(p => { ctx.beginPath(); ctx.arc(p.x*canv.width, p.y*canv.height, 1, 0, 2*Math.PI); ctx.stroke(); });
         } else { meshData[currentAngle] = null; }
         processNext();
     }
 
-    // 3D Euclidean Distance (Uses Z-axis from MediaPipe for rotation normalization)
+    // --- V. EUCLIDEAN GEOMETRY ENGINE ---
+    // 3D Distance (Uses Z-axis from MediaPipe for rotation normalization)
     function calc3D(p1, p2, w, h) {
         const dx = (p1.x - p2.x) * w;
         const dy = (p1.y - p2.y) * h;
-        const dz = (p1.z - p2.z) * w; // Z is proportional to width in MP
+        const dz = (p1.z - p2.z) * w;
         return Math.sqrt(dx*dx + dy*dy + dz*dz);
     }
     
-    // 2D Distance for flat canvas mapping
-    function calc2D(p1, p2, w, h) { return Math.sqrt(Math.pow((p1.x - p2.x)*w, 2) + Math.pow((p1.y - p2.y)*h, 2)); }
+    // Angle calculation for tilt metrics
     function calcAng(p1, p2) { return Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI); }
 
-    // Map a value to a 0-100 percentile based on min/max bounds
-    function mapPercentile(val, min, max) {
+    // Percentile mapping function (forces float to 0-100 curve)
+    function mapPct(val, min, max) {
         let p = ((val - min) / (max - min)) * 100;
         return Math.max(0, Math.min(100, p));
     }
 
+    // --- VI. THE TITAN MATRIX BUILDER ---
     function buildSpectrumMatrix() {
-        if (!meshData.front) return alert("CRITICAL ERROR: Frontal mesh extraction failed. Ensure face is fully visible.");
+        if (!meshData.front) return alert("CRITICAL ERROR: Frontal mesh extraction failed. Ensure face is fully illuminated and visible.");
         
         const f = meshData.front;
         const w = canvases.front.width;
         const h = canvases.front.height;
         
+        // Setup side profile fallback logic
         let sProfile = meshData.right ? meshData.right : (meshData.left ? meshData.left : null);
-        let sw = sProfile ? (meshData.right ? canvases.right.width : canvases.left.width) : w;
-        let sh = sProfile ? (meshData.right ? canvases.right.height : canvases.left.height) : h;
 
-        // CALCULATE RAW GEOMETRY
+        // RAW GEOMETRY EXTRACTION
         const bizygomatic = calc3D(f[234], f[454], w, h);
         const midfaceH = calc3D(f[10], f[152], w, h);
         const jawW = calc3D(f[132], f[361], w, h);
         
         const fWHR = bizygomatic / midfaceH;
-        const jawRatio = jawW / bizygomatic;
         const avgTilt = -((calcAng(f[33], f[133]) + calcAng(f[362], f[263])) / 2);
         
-        const ipd = calc3D(f[133], f[362], w, h);
         const eyeW = calc3D(f[33], f[133], w, h);
+        const ipd = calc3D(f[133], f[362], w, h);
         const eyeSpacing = ipd / eyeW;
         
         const eyeH = calc3D(f[159], f[145], w, h);
@@ -218,7 +243,6 @@
         const lowerLip = calc3D(f[14], f[17], w, h);
         const lipRatio = upperLip / (lowerLip === 0 ? 1 : lowerLip);
         
-        const mouthW = calc3D(f[61], f[291], w, h) / bizygomatic;
         const asymmetry = Math.abs(calc3D(f[4], f[132], w, h) - calc3D(f[4], f[361], w, h)) / w;
         const innerFaceVol = calc3D(f[33], f[362], w, h) / bizygomatic;
 
@@ -228,112 +252,122 @@
         const chinProj = sProfile ? Math.abs(sProfile[152].x - sProfile[168].x) : Math.abs(f[152].z - f[168].z);
         const radixDepth = sProfile ? Math.abs(sProfile[168].x - sProfile[33].x) : Math.abs(f[168].z - f[33].z);
 
-        // DATA DICTIONARY FOR VARIABLE GENERATION
+        // --- GENERAL MOOD CALCULATION (THE NEW VECTOR) ---
+        // Measures Commissure (mouth corner) relative Y height vs center lip, combined with Glabella (brow) pinch
+        const leftMouthTilt = (f[0].y - f[61].y); 
+        const rightMouthTilt = (f[0].y - f[291].y);
+        const avgMouthTilt = (leftMouthTilt + rightMouthTilt) / 2; // Positive = smiling, Negative = frowning
+        const glabellaPinch = calc3D(f[107], f[336], w, h) / bizygomatic; // Lower = more tense/angry
+        
+        // Composite Mood Score: Tilt (weighted heavy) - Pinch tightness
+        const rawMoodScore = (avgMouthTilt * 50) + (glabellaPinch * 10);
+
+        // --- TRAIT DICTIONARY & TIER MATRIX ---
         const TRAITS = [
             {
                 id: "VCTR_01", title: "Androgenic Dominance (fWHR)",
                 desc: "Ratio of bizygomatic width to midface height. Evaluates pubertal testosterone load and natural dominance drive.",
-                val: fWHR, pct: mapPercentile(fWHR, 1.4, 2.2),
+                val: fWHR, pct: mapPct(fWHR, 1.4, 2.2),
                 tiers: [
-                    { t: "Extreme Subordination", c: "tier-extreme-low", text: "Evolutionary flight-response dominance. Highly submissive geometry. Terrified of physical conflict, relies entirely on appeasement and system manipulation to survive. Will fold immediately under blunt force." },
+                    { t: "Extreme Subordination", c: "tier-extreme-low", text: "Evolutionary flight-response dominance. Highly submissive geometry. Terrified of physical conflict, relies entirely on appeasement and system manipulation to survive." },
                     { t: "Diplomatic Aversion", c: "tier-low", text: "Low risk tolerance. Naturally avoids zero-sum games. Prefers building coalitions rather than fighting for the alpha position. Escapes aggression through intellectualization." },
-                    { t: "Balanced Operator", c: "tier-moderate", text: "Calculated aggression. Does not seek conflict for pleasure, but capable of extreme escalation if resources or boundaries are explicitly threatened." },
-                    { t: "High Dominance", c: "tier-high", text: "Biologically primed for hierarchy climbing. Views environments as ladders to conquer. Highly combative, unapologetic, and naturally assumes leadership positions through sheer physical presence." },
+                    { t: "Balanced Operator", c: "tier-moderate", text: "Calculated aggression. Does not seek conflict for pleasure, but capable of extreme escalation if resources or operational boundaries are explicitly threatened." },
+                    { t: "High Dominance", c: "tier-high", text: "Biologically primed for hierarchy climbing. Views environments as ladders to conquer. Highly combative, unapologetic, and naturally assumes leadership positions through physical presence." },
                     { t: "Tyrannical Outlier", c: "tier-extreme-high", text: "Hyper-aggressive genetic outlier. Incapable of submission. Views all social interactions as dominance combat. Ruthless, explosive, and highly prone to destructive escalations when challenged." }
                 ]
             },
             {
                 id: "VCTR_02", title: "Predatory Worldview (Canthal Tilt)",
                 desc: "Medial to lateral eye tilt angle. Dictates baseline optimism vs. flaw-detection.",
-                val: avgTilt, pct: mapPercentile(avgTilt, -5, 5),
+                val: avgTilt, pct: mapPct(avgTilt, -5, 5),
                 tiers: [
-                    { t: "Severe Pessimism", c: "tier-extreme-low", text: "Pathological flaw detector. Deeply neurotic. Hardwired to see everything that is broken, ugly, or inefficient immediately. Horrible to live with, but biologically indispensable for auditing corrupt systems." },
-                    { t: "Critical Analyst", c: "tier-low", text: "Naturally cynical. Distrusts positive outcomes. Will tear apart arguments and plans to find the structural weakness before ever committing." },
-                    { t: "Pragmatic Realism", c: "tier-moderate", text: "Unbiased visual processing. Does not project artificial optimism nor pathological dread onto new information." },
-                    { t: "Optimistic Asserter", c: "tier-high", text: "Expects to win. Subconsciously prioritizes their own reality. Forgives their own mistakes instantly while demanding compliance from others." },
-                    { t: "Predatory Narcissist", c: "tier-extreme-high", text: "Extreme predatory optimism. Incapable of empathy when acquiring resources. Views other humans purely as objects or stepping stones to be utilized for personal ascension." }
+                    { t: "Severe Pessimism", c: "tier-extreme-low", text: "Pathological flaw detector. Deeply neurotic. Hardwired to instantly see what is broken or inefficient. Horrible to live with, but biologically indispensable for auditing corrupt systems." },
+                    { t: "Critical Analyst", c: "tier-low", text: "Naturally cynical. Distrusts positive outcomes. Will tear apart arguments and business plans to find the structural weakness before ever committing capital or time." },
+                    { t: "Pragmatic Realism", c: "tier-moderate", text: "Unbiased visual processing. Does not project artificial optimism nor pathological dread onto new information. Assesses reality at par value." },
+                    { t: "Optimistic Asserter", c: "tier-high", text: "Expects to win. Subconsciously prioritizes personal reality. Forgives their own mistakes instantly while demanding compliance from subordinates and peers." },
+                    { t: "Predatory Narcissist", c: "tier-extreme-high", text: "Extreme predatory optimism. Incapable of empathy when acquiring resources. Views other humans purely as objects, data points, or stepping stones for personal ascension." }
                 ]
             },
             {
                 id: "VCTR_03", title: "Cognitive Tunneling (IPD Ratio)",
                 desc: "Interpupillary distance vs eye width. Determines macro-vision vs micro-obsession.",
-                val: eyeSpacing, pct: mapPercentile(eyeSpacing, 0.7, 1.3),
+                val: eyeSpacing, pct: mapPct(eyeSpacing, 0.7, 1.3),
                 tiers: [
-                    { t: "Obsessive Fixation", c: "tier-extreme-low", text: "Dangerous micro-manager. Capable of extreme, sociopathic focus on a single detail to the detriment of reality. Will burn down a corporation over a single misplaced comma." },
-                    { t: "High Detail Focus", c: "tier-low", text: "Intensely observant. High disgust impulse toward sloppy execution. Excellent at precision engineering but struggles to delegate." },
-                    { t: "Standard Perception", c: "tier-moderate", text: "Balanced cognitive scope. Can zoom in on details when forced, but naturally reverts to standard operational overviews." },
-                    { t: "Macro Tolerance", c: "tier-high", text: "Big-picture visionary. Highly tolerant of chaos. Terrible with details and will inevitably leak resources due to operational sloppiness." },
+                    { t: "Obsessive Fixation", c: "tier-extreme-low", text: "Dangerous micro-manager. Capable of extreme, sociopathic focus on a single detail to the detriment of reality. Will burn down an entire operation over a single misaligned UI element." },
+                    { t: "High Detail Focus", c: "tier-low", text: "Intensely observant. High disgust impulse toward sloppy execution. Excellent at precision engineering and spreadsheet modeling, but struggles heavily to delegate tasks." },
+                    { t: "Standard Perception", c: "tier-moderate", text: "Balanced cognitive scope. Can zoom in on data points when forced, but naturally reverts to standard operational overviews." },
+                    { t: "Macro Tolerance", c: "tier-high", text: "Big-picture visionary. Highly tolerant of chaos. Terrible with details and will inevitably leak resources due to operational sloppiness and failure to track daily metrics." },
                     { t: "Blind Dissociation", c: "tier-extreme-high", text: "Completely detached from physical details. So focused on the abstract 'forest' they walk straight into the 'trees'. Extremely gullible to scammers using granular data." }
                 ]
             },
             {
                 id: "VCTR_04", title: "Deception Shield (Palpebral Ratio)",
                 desc: "Degree of eyelid hooding. Maps psychological guardedness vs emotional transparency.",
-                val: palpebralRatio, pct: mapPercentile(palpebralRatio, 1.8, 3.5),
+                val: palpebralRatio, pct: mapPct(palpebralRatio, 1.8, 3.5),
                 tiers: [
-                    { t: "Hyper-Exposed", c: "tier-extreme-low", text: "Prey eyes. Completely incapable of hiding emotions. Reacts instantly to fear, joy, or stress. The worst liar on earth; a biological open book easily manipulated by predators." },
-                    { t: "Emotionally Generous", c: "tier-low", text: "Highly receptive and socially warm. Seeks validation and intimacy immediately. Wears their heart on their sleeve." },
-                    { t: "Selective Guarding", c: "tier-moderate", text: "Can maintain a poker face when conscious of it, but defaults to standard emotional leakage under sudden stress." },
-                    { t: "Calculated Observer", c: "tier-high", text: "Heavy hooding. Deeply skeptical and resistant to emotional ploys. Observes others while giving away zero data about their own internal state." },
+                    { t: "Hyper-Exposed", c: "tier-extreme-low", text: "Prey eyes. Completely incapable of hiding emotions. Reacts instantly to fear, joy, or stress. The worst liar on earth; a biological open book easily manipulated by social predators." },
+                    { t: "Emotionally Generous", c: "tier-low", text: "Highly receptive and socially warm. Seeks validation and intimacy immediately. Wears their heart on their sleeve and is easily exhausted by cynical environments." },
+                    { t: "Selective Guarding", c: "tier-moderate", text: "Can maintain a poker face when conscious of it, but defaults to standard emotional leakage under sudden stress or unexpected confrontation." },
+                    { t: "Calculated Observer", c: "tier-high", text: "Heavy hooding. Deeply skeptical and resistant to emotional ploys. Observes others while giving away zero data about their own internal state. Excellent at business poker." },
                     { t: "Machiavellian Void", c: "tier-extreme-high", text: "Total dead-eye hunter phenotype. Zero emotional leakage. Highly sociopathic masking capabilities. Can lie to your face while maintaining a resting heart rate." }
                 ]
             },
             {
                 id: "VCTR_05", title: "Cognitive Fracture (Bilateral Asymmetry)",
                 desc: "Euclidean variance between left (private) and right (public) mandibular vectors.",
-                val: asymmetry, pct: mapPercentile(asymmetry, 0.0, 0.05),
+                val: asymmetry, pct: mapPct(asymmetry, 0.0, 0.05),
                 tiers: [
-                    { t: "Total Congruence", c: "tier-extreme-low", text: "Extreme psychological transparency. What they think in private is exactly how they act in public. Incapable of complex two-faced social maneuvering." },
-                    { t: "Authentic Integration", c: "tier-low", text: "Highly genuine operator. The public persona is a direct reflection of the private soul." },
-                    { t: "Standard Adaptation", c: "tier-moderate", text: "Maintains a polite public mask but does not suffer from extreme internal dissonance." },
-                    { t: "Fractured Masking", c: "tier-high", text: "Significant disconnect. The face they show at work/public is a highly manufactured armor hiding a very different, potentially insecure or hostile internal state." },
+                    { t: "Total Congruence", c: "tier-extreme-low", text: "Extreme psychological transparency. What they think in private is exactly how they act in public. Incapable of complex, two-faced social maneuvering or corporate backstabbing." },
+                    { t: "Authentic Integration", c: "tier-low", text: "Highly genuine operator. The public persona is a direct, honest reflection of the private soul and family-rooted baseline." },
+                    { t: "Standard Adaptation", c: "tier-moderate", text: "Maintains a polite public mask for the workplace, but does not suffer from extreme internal dissonance or buried psychological trauma." },
+                    { t: "Fractured Masking", c: "tier-high", text: "Significant disconnect. The face shown at work or to management is a highly manufactured armor hiding a very different, potentially insecure or hostile internal state." },
                     { t: "Severe Dissonance", c: "tier-extreme-high", text: "Pathological psychological split. Deeply buried trauma or active, conscious deception. The public persona is a complete lie built to hide a volatile, potentially dangerous inner reality." }
                 ]
             },
             {
                 id: "VCTR_06", title: "Hedonistic Slave Index (Philtrum)",
                 desc: "Relative philtrum length. Maps the prefrontal cortex's ability to override base dopamine urges.",
-                val: philtrum, pct: mapPercentile(philtrum, 0.04, 0.12),
+                val: philtrum, pct: mapPct(philtrum, 0.04, 0.12),
                 tiers: [
-                    { t: "Absolute Slave", c: "tier-extreme-low", text: "Zero biological impulse control. A slave to the next hit of dopamine, sex, or sugar. Will annihilate long-term life plans for 5 minutes of immediate physical gratification." },
-                    { t: "Impulsive Hedonist", c: "tier-low", text: "Struggles deeply with discipline. Prone to binge behaviors. Requires external structures (rules, tracking apps) to avoid self-sabotage." },
-                    { t: "Regulated Enjoyment", c: "tier-moderate", text: "Enjoys pleasure but maintains standard operational discipline. Can delay gratification for moderate periods." },
-                    { t: "Stoic Restraint", c: "tier-high", text: "High biological discipline. Easily suppresses physical urges in favor of calculated long-term systemic gains." },
-                    { t: "Monastic Asceticism", c: "tier-extreme-high", text: "Extreme biological override. Completely detached from earthly pleasures. Capable of enduring brutal, prolonged deprivation without psychological breaking." }
+                    { t: "Absolute Slave", c: "tier-extreme-low", text: "Zero biological impulse control. A slave to the next hit of dopamine, validation, or sugar. Will annihilate long-term life plans for 5 minutes of immediate physical gratification." },
+                    { t: "Impulsive Hedonist", c: "tier-low", text: "Struggles deeply with discipline. Prone to binge behaviors. Requires rigid external structures (like extreme data tracking apps) to avoid systemic self-sabotage." },
+                    { t: "Regulated Enjoyment", c: "tier-moderate", text: "Enjoys pleasure but maintains standard operational discipline. Can delay gratification for moderate periods without psychological breakdown." },
+                    { t: "Stoic Restraint", c: "tier-high", text: "High biological discipline. Easily suppresses physical urges in favor of calculated long-term systemic gains. Can execute repetitive daily habits flawlessly." },
+                    { t: "Monastic Asceticism", c: "tier-extreme-high", text: "Extreme biological override. Completely detached from earthly pleasures. Capable of enduring brutal, prolonged deprivation and isolation without psychological breaking." }
                 ]
             },
             {
                 id: "VCTR_07", title: "Verbal Narcissism (Lip Ratio)",
                 desc: "Upper to lower lip volume. Maps external validation seeking via verbal dominance.",
-                val: lipRatio, pct: mapPercentile(lipRatio, 0.5, 1.5),
+                val: lipRatio, pct: mapPct(lipRatio, 0.5, 1.5),
                 tiers: [
-                    { t: "The Vault", c: "tier-extreme-low", text: "Inpenetrable. Stores massive amounts of opinions, judgments, and secrets internally. Will watch you destroy yourself without uttering a single word of warning." },
-                    { t: "Guarded Withholder", c: "tier-low", text: "Speaks only when absolutely necessary. Prefers others to reveal their hands first. Hard to build emotional intimacy with." },
-                    { t: "Balanced Communicator", c: "tier-moderate", text: "Shares relevant data when necessary. Does not hoard information, nor do they verbally vomit." },
-                    { t: "Verbal Dominator", c: "tier-high", text: "Requires external processing. Will talk through their problems loudly. Tends to over-share and interrupt." },
+                    { t: "The Vault", c: "tier-extreme-low", text: "Impenetrable. Stores massive amounts of opinions, judgments, and secrets internally. Will watch you destroy yourself without uttering a single word of warning." },
+                    { t: "Guarded Withholder", c: "tier-low", text: "Speaks only when absolutely necessary. Prefers others to reveal their hands first. Extremely hard to build emotional intimacy with." },
+                    { t: "Balanced Communicator", c: "tier-moderate", text: "Shares relevant data when necessary. Does not hoard information, nor do they verbally vomit on colleagues." },
+                    { t: "Verbal Dominator", c: "tier-high", text: "Requires external processing. Will talk through their problems loudly. Tends to over-share, interrupt, and forcefully assert their narrative in meetings." },
                     { t: "Pathological Narcissist", c: "tier-extreme-high", text: "Incapable of silence. Processes the entire universe by making it about themselves loudly. Will suck all oxygen from a room. Cannot keep a secret under torture." }
                 ]
             },
             {
                 id: "VCTR_08", title: "Cortical Dominance (Facial Thirds)",
                 desc: "Upper Third (Brain) vs Lower Third (Brawn) volume percentage.",
-                val: uThird / lThird, pct: mapPercentile(uThird / lThird, 0.7, 1.5),
+                val: uThird / lThird, pct: mapPct(uThird / lThird, 0.7, 1.5),
                 tiers: [
-                    { t: "Brute Executioner", c: "tier-extreme-low", text: "Pure instinct. Thought is a barrier to action. Shoot first, never ask questions. Highly effective in physical combat, utterly useless in strategic planning." },
-                    { t: "Action Biased", c: "tier-low", text: "Prefers the physical world. Learns by doing, breaking, and fixing. Dislikes sitting in classrooms or theoretical meetings." },
-                    { t: "Synchronized Engine", c: "tier-moderate", text: "Equal flow from thought, to ambition, to execution. Neither paralyzed by analysis nor reckless with action." },
-                    { t: "Theoretical Planner", c: "tier-high", text: "Prefers systems over reality. Will design the perfect plan but hesitate endlessly to pull the trigger on execution." },
+                    { t: "Brute Executioner", c: "tier-extreme-low", text: "Pure physical instinct. Thought is a barrier to action. Shoot first, never ask questions. Highly effective in raw physical force, utterly useless in strategic planning." },
+                    { t: "Action Biased", c: "tier-low", text: "Prefers the physical world. Learns by doing, breaking, and fixing. Dislikes sitting in classrooms, abstract lectures, or theoretical meetings." },
+                    { t: "Synchronized Engine", c: "tier-moderate", text: "Equal flow from thought, to ambition, to execution. Neither paralyzed by analysis nor reckless with uncalculated action." },
+                    { t: "Theoretical Planner", c: "tier-high", text: "Prefers systems and spreadsheets over reality. Will design the perfect B2B plan but hesitate endlessly to actually validate it with real clients." },
                     { t: "Cerebral Paralysis", c: "tier-extreme-high", text: "The brain entirely cannibalizes the body. Trapped in an endless loop of abstract neuroticism and overthinking. Utterly terrified of physical, uncalculated reality." }
                 ]
             },
             {
                 id: "VCTR_09", title: "Social Contagion (Inner Face Vol)",
                 desc: "Percentage of face occupied by sensory organs. Determines susceptibility to crowd panic.",
-                val: innerFaceVol, pct: mapPercentile(innerFaceVol, 0.35, 0.60),
+                val: innerFaceVol, pct: mapPct(innerFaceVol, 0.35, 0.60),
                 tiers: [
-                    { t: "Psychopathic Void", c: "tier-extreme-low", text: "Utterly immune to social pressure. Can sit in a burning room filled with screaming people and feel absolutely zero internal elevation in heart rate. Cold to the point of being disturbing." },
-                    { t: "Aloof Operator", c: "tier-low", text: "Highly compartmentalized. Does not absorb the anxiety of others. Excellent in crisis management." },
-                    { t: "Standard Empathy", c: "tier-moderate", text: "Feels the room appropriately but can separate self from the crowd when required." },
+                    { t: "Psychopathic Void", c: "tier-extreme-low", text: "Utterly immune to social pressure. Can sit in a room filled with screaming, panicking people and feel absolutely zero internal elevation in heart rate. Cold to the point of being disturbing." },
+                    { t: "Aloof Operator", c: "tier-low", text: "Highly compartmentalized. Does not absorb the anxiety of others. Excellent in crisis management or handling erratic superiors." },
+                    { t: "Standard Empathy", c: "tier-moderate", text: "Feels the room appropriately but can separate self from the crowd when logic strictly requires it." },
                     { t: "Social Sponge", c: "tier-high", text: "Highly receptive to the moods of others. Easily peer-pressured into bad decisions due to a biological need to harmonize with the pack." },
                     { t: "Hysterical Contagion", c: "tier-extreme-high", text: "Zero boundary between self and crowd. Will instantly adopt the panic, rage, or joy of whatever mob they are standing in. Biologically incapable of independent emotional regulation." }
                 ]
@@ -341,80 +375,92 @@
             {
                 id: "VCTR_10", title: "Information Delay (Radix Depth)",
                 desc: "Depth of the nasal root. Maps the delay between receiving stimulus and executing action.",
-                val: radixDepth, pct: mapPercentile(radixDepth, 0.0, 0.15),
+                val: radixDepth, pct: mapPct(radixDepth, 0.0, 0.15),
                 tiers: [
                     { t: "Hair-Trigger Reckless", c: "tier-extreme-low", text: "Zero latency. Acts instantly on the very first fraction of data received. Highly explosive but generates catastrophic, uncalculated errors constantly." },
-                    { t: "Rapid Reactor", c: "tier-low", text: "Quick on their feet. Good for fast-moving startups or combat, but prone to jumping the gun." },
-                    { t: "Measured Response", c: "tier-moderate", text: "Takes a beat to assess before moving. Reliable pace." },
-                    { t: "Suspicious Hesitator", c: "tier-high", text: "Distrusts initial data. Requires secondary confirmation before moving. Excellent auditor, terrible frontline commander." },
-                    { t: "Paralytic Skeptic", c: "tier-extreme-high", text: "Pathological hesitation. Demands 100% certainty in a universe that only offers 80%. Will freeze and die waiting for perfect information." }
+                    { t: "Rapid Reactor", c: "tier-low", text: "Quick on their feet. Good for fast-moving startups or sudden physical combat, but heavily prone to jumping the gun on bad information." },
+                    { t: "Measured Response", c: "tier-moderate", text: "Takes a specific, calculated beat to assess the variables before moving. Reliable, steady operational pace." },
+                    { t: "Suspicious Hesitator", c: "tier-high", text: "Distrusts initial data. Requires secondary and tertiary confirmation before moving. Excellent systems auditor, terrible frontline commander." },
+                    { t: "Paralytic Skeptic", c: "tier-extreme-high", text: "Pathological hesitation. Demands 100% certainty in a universe that only offers 80%. Will freeze and die waiting for perfect, risk-free information." }
                 ]
             },
             {
                 id: "VCTR_11", title: "Systemic Endurance (Midface)",
-                desc: "Relative height of the maxillary/respiratory zone. Maps long-burn stamina vs short-burst explosive energy.",
-                val: mThird / tFaceH, pct: mapPercentile(mThird / tFaceH, 0.28, 0.45),
+                desc: "Relative height of the maxillary/respiratory zone. Maps long-burn stamina vs short-burst energy.",
+                val: mThird / tFaceH, pct: mapPct(mThird / tFaceH, 0.28, 0.45),
                 tiers: [
-                    { t: "Fragile Sprinter", c: "tier-extreme-low", text: "Zero long-term endurance. Built for 10-second explosive outputs. Will suffer total physiological and nervous system collapse if subjected to prolonged, inescapable stress or grinding work hours." },
-                    { t: "Burst Operator", c: "tier-low", text: "Requires frequent rest cycles. Highly effective in short, intense bursts but burns out quickly in marathons." },
-                    { t: "Standard Capacity", c: "tier-moderate", text: "Can handle 9-to-5 grinds effectively. Normal recovery rate." },
-                    { t: "The Workhorse", c: "tier-high", text: "Deep reserves of physical and mental stamina. Can grind through terrible conditions long after others have quit." },
+                    { t: "Fragile Sprinter", c: "tier-extreme-low", text: "Zero long-term endurance. Built for 10-second explosive outputs. Will suffer total physiological and nervous system collapse if subjected to prolonged, inescapable grinding stress." },
+                    { t: "Burst Operator", c: "tier-low", text: "Requires frequent, heavy rest cycles. Highly effective in short, intense bursts (like heavy powerlifting sets) but burns out quickly in marathons." },
+                    { t: "Standard Capacity", c: "tier-moderate", text: "Can handle standard operational grinds effectively. Normal, baseline recovery rate for daily tasks." },
+                    { t: "The Workhorse", c: "tier-high", text: "Deep reserves of physical and mental stamina. Can grind through terrible conditions and heavy organizational friction long after others have quit." },
                     { t: "The Marathon Engine", c: "tier-extreme-high", text: "Freakish biological endurance. Thrives in prolonged, agonizing environments. Cannot be outworked. Draws power from grueling, extended suffering." }
                 ]
             },
             {
                 id: "VCTR_12", title: "Boundary Intrusion (Nasal Proj)",
                 desc: "Forward projection of the nose. Correlates with investigative intrusion and boundary crossing.",
-                val: nasalProj, pct: mapPercentile(nasalProj, 0.02, 0.15),
+                val: nasalProj, pct: mapPct(nasalProj, 0.02, 0.15),
                 tiers: [
-                    { t: "Total Passivity", c: "tier-extreme-low", text: "Pathologically avoidant. Utterly terrified of overstepping bounds. Will sit in silence rather than ask a necessary question. Submits space to anyone who asks." },
-                    { t: "Respectful Receiver", c: "tier-low", text: "Waits for information to be offered. Dislikes prying into the affairs of others." },
-                    { t: "Polite Inquirer", c: "tier-moderate", text: "Asks questions when needed but respects closed doors." },
-                    { t: "Pioneering Intruder", c: "tier-high", text: "Highly curious. Will push into other people's territory, systems, and private lives to extract the data they want." },
+                    { t: "Total Passivity", c: "tier-extreme-low", text: "Pathologically avoidant. Utterly terrified of overstepping bounds. Will sit in silence rather than ask a necessary operational question. Submits space to anyone who asks." },
+                    { t: "Respectful Receiver", c: "tier-low", text: "Waits for information to be offered. Dislikes prying into the affairs or data of others. Excellent at respecting privacy." },
+                    { t: "Polite Inquirer", c: "tier-moderate", text: "Asks direct questions when necessary for the mission, but respects closed doors and personal boundaries." },
+                    { t: "Pioneering Intruder", c: "tier-high", text: "Highly curious and aggressive. Will push into other people's territory, tech stacks, and private lives to extract the data they want." },
                     { t: "Ruthless Interrogator", c: "tier-extreme-high", text: "Zero respect for physical or psychological boundaries. Will aggressively pry open locked doors, hack systems, and demand answers. Views privacy as an obstacle to be smashed." }
                 ]
             },
             {
                 id: "VCTR_13", title: "Collision Response (Chin Prog)",
                 desc: "Forward growth of the menton. Dictates response to direct, head-on conflict.",
-                val: chinProj, pct: mapPercentile(chinProj, 0.0, 0.12),
+                val: chinProj, pct: mapPct(chinProj, 0.0, 0.12),
                 tiers: [
-                    { t: "Flight Response", c: "tier-extreme-low", text: "Extreme conflict aversion. Will yield immediately to any application of force. Highly malleable, easy to push around, physically recoils from confrontation." },
-                    { t: "De-escalator", c: "tier-low", text: "Prefers to talk their way out of a fight. Will surrender ground to maintain the peace." },
-                    { t: "Rational Defender", c: "tier-moderate", text: "Holds ground when necessary, but willing to compromise if presented with a better logical path." },
-                    { t: "Stubborn Asserter", c: "tier-high", text: "Steps forward into the pressure. Highly resistant to changing their mind once committed. Will take a hit rather than move." },
-                    { t: "Violent Absolutist", c: "tier-extreme-high", text: "Pathologically unyielding. Will deliberately escalate a collision rather than submit a single inch. Would rather crash the ship into the rocks than hand over the steering wheel." }
+                    { t: "Flight Response", c: "tier-extreme-low", text: "Extreme conflict aversion. Will yield immediately to any application of force or authority. Highly malleable, physically recoils from confrontation." },
+                    { t: "De-escalator", c: "tier-low", text: "Prefers to talk or negotiate their way out of a fight. Will surrender ground or equity to maintain the peace." },
+                    { t: "Rational Defender", c: "tier-moderate", text: "Holds ground when necessary, but willing to compromise if presented with a better logical or financial path." },
+                    { t: "Stubborn Asserter", c: "tier-high", text: "Steps forward into the pressure. Highly resistant to changing their mind once committed. Will take a hit rather than move an inch." },
+                    { t: "Violent Absolutist", c: "tier-extreme-high", text: "Pathologically unyielding. Will deliberately escalate a collision rather than submit. Would rather crash the company into the rocks than hand over the steering wheel." }
                 ]
             },
             {
                 id: "VCTR_14", title: "Instinctual Override (Cranial Slope)",
                 desc: "Forehead incline. Maps the amygdala's dominance over the prefrontal cortex.",
-                val: cranialSlope, pct: mapPercentile(cranialSlope, 0.0, 0.08),
+                val: cranialSlope, pct: mapPct(cranialSlope, 0.0, 0.08),
                 tiers: [
-                    { t: "Cold Calculator", c: "tier-extreme-low", text: "Pure prefrontal dominance. Utterly detached from animal instinct. Every single action is heavily filtered, analyzed, and sterilized before execution. Can seem robotic." },
-                    { t: "Logical Restraint", c: "tier-low", text: "Heavily suppresses emotional outbursts. Thinks before reacting to insults or threats." },
-                    { t: "Balanced Reactivity", c: "tier-moderate", text: "Standard human operating parameters. Logic usually prevails, but instinct takes over in emergencies." },
-                    { t: "Hot-Blooded", c: "tier-high", text: "The animal is close to the surface. Quick to anger, quick to act. Led heavily by gut instinct rather than spreadsheet logic." },
-                    { t: "Feral Impulsivity", c: "tier-extreme-high", text: "The amygdala completely overrides the brain. Highly reactive, physically explosive, and prone to wild, destructive, uncalculated violence when cornered. Acts entirely on base survival instinct." }
+                    { t: "Cold Calculator", c: "tier-extreme-low", text: "Pure prefrontal dominance. Utterly detached from animal instinct. Every single action is heavily filtered, analyzed, and sterilized before execution. Can seem robotic or alien." },
+                    { t: "Logical Restraint", c: "tier-low", text: "Heavily suppresses emotional outbursts. Thinks systematically before reacting to insults, threats, or market fluctuations." },
+                    { t: "Balanced Reactivity", c: "tier-moderate", text: "Standard human operating parameters. Logic usually prevails in business, but instinct takes over in emergencies." },
+                    { t: "Hot-Blooded", c: "tier-high", text: "The animal is close to the surface. Quick to anger, quick to act. Led heavily by gut instinct and 'vibes' rather than spreadsheet logic." },
+                    { t: "Feral Impulsivity", c: "tier-extreme-high", text: "The amygdala completely overrides the brain. Highly reactive, physically explosive, and prone to wild, destructive, uncalculated violence when cornered." }
                 ]
             },
             {
                 id: "VCTR_15", title: "Vitality Battery (Maxillary Support)",
                 desc: "Cheekbone width relative to midface. Visual indicator of biological debt and exhaustion.",
-                val: bizygomatic / midfaceH, pct: mapPercentile(bizygomatic / midfaceH, 1.1, 1.7),
+                val: bizygomatic / midfaceH, pct: mapPct(bizygomatic / midfaceH, 1.1, 1.7),
                 tiers: [
                     { t: "Terminal Exhaustion", c: "tier-extreme-low", text: "Negative orbital vector. Face appears melted or hollowed out. Subject is carrying massive physiological debt, chronic exhaustion, or illness. One bad day away from total system failure." },
-                    { t: "Low Battery", c: "tier-low", text: "Visible fatigue. Operates at a systemic deficit. Highly susceptible to rapid burnout if pushed." },
-                    { t: "Standard Output", c: "tier-moderate", text: "Normal biological health markers. Sustains daily life effectively." },
-                    { t: "High Resilience", c: "tier-high", text: "Excellent bone support. Projects an aura of strength, health, and capability. Resilient to aging and physical trauma." },
+                    { t: "Low Battery", c: "tier-low", text: "Visible fatigue. Operates at a systemic deficit. Highly susceptible to rapid burnout if pushed by heavy physical or mental workloads." },
+                    { t: "Standard Output", c: "tier-moderate", text: "Normal biological health markers. Sustains daily university/work life effectively but requires standard 8-hour recovery." },
+                    { t: "High Resilience", c: "tier-high", text: "Excellent bone support. Projects an aura of strength, health, and capability. Highly resilient to aging, environmental damage, and sleep deprivation." },
                     { t: "Peak Biological Armor", c: "tier-extreme-high", text: "Extreme structural vitality. Bulletproof genetics. Radiates raw, overwhelming health. Can absorb massive environmental damage, toxins, or stress and recover almost instantaneously." }
+                ]
+            },
+            {
+                id: "VCTR_16", title: "General Mood Baseline (Neuromuscular Tension)",
+                desc: "Measures Zygomaticus major tension (mouth corner lift) vs. Corrugator supercilii (brow pinch). Evaluates baseline happiness, depression, and life satisfaction. NOTE: Physiognomic reading, not clinical.",
+                val: rawMoodScore, pct: mapPct(rawMoodScore, -5, 5),
+                tiers: [
+                    { t: "Severe Melancholia", c: "tier-extreme-low", text: "Deep, chronic depression etched into the neuromuscular resting state. The Depressor anguli oris pulls the mouth into a permanent scowl; the brow is heavy with unresolved dread. Life satisfaction is practically zero. Perceives existence as a heavy, joyless burden." },
+                    { t: "Cynical Dissatisfaction", c: "tier-low", text: "A pervasive, low-grade discontent. Rarely experiences uninhibited joy. Views the world through a lens of exhaustion and skepticism. Life is 'okay' but fundamentally disappointing. Smiles are forced and fade instantly into a hard, flat baseline." },
+                    { t: "Stoic Neutrality", c: "tier-moderate", text: "Emotionally flatlined in a healthy way. Neither overly ecstatic nor deeply depressed. A perfectly grounded baseline that approaches daily life as a series of tasks to be executed without heavy emotional fluctuation." },
+                    { t: "Active Optimism", c: "tier-high", text: "High life satisfaction. The Zygomaticus muscles hold a natural, resting uplift. Experiences genuine, frequent bursts of happiness. Wakes up energized and views daily challenges as engaging puzzles rather than oppressive burdens." },
+                    { t: "Manic Euphoria", c: "tier-extreme-high", text: "Unshakeable, almost unnatural bliss. Radiates an overwhelming, blinding happiness that can seem intimidating or manic to neutral observers. Total biological satisfaction with life; immune to environmental sadness." }
                 ]
             }
         ];
 
+        // --- VII. UI GENERATION ---
         let html = "";
         TRAITS.forEach(t => {
-            // Determine Tier
             let tier;
             if (t.pct < 10) tier = t.tiers[0];
             else if (t.pct < 35) tier = t.tiers[1];
@@ -433,10 +479,10 @@
                     <div class="data-bar-marker" style="left: ${t.pct}%"></div>
                 </div>
                 <div class="trait-body">
-                    <div class="geometry-box">${t.desc}</div>
-                    <div class="tier-label ${tier.c}">${tier.t}</div>
+                    <div class="geometry-box"><strong>ENGINE METRIC:</strong> ${t.desc}</div>
+                    <div><span class="tier-label ${tier.c}">${tier.t}</span></div>
                     <div class="reading-box">${tier.text}</div>
-                    <span class="metric-val">RAW_VCTR_VAL: ${t.val.toFixed(4)}</span>
+                    <span class="metric-val">RAW_CALC_FLOAT: ${t.val.toFixed(4)}</span>
                 </div>
             </div>`;
         });
@@ -444,7 +490,7 @@
         reportGrid.innerHTML = html;
         reportPanel.style.display = 'block';
         
-        // Scroll to results
+        // Auto-scroll to the brutal truth
         reportPanel.scrollIntoView({ behavior: 'smooth' });
     }
 </script>
