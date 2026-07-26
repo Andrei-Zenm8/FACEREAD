@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FaceRead | Physiognomy Engine</title>
+    
+    <!-- Load MediaPipe Face Mesh locally via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    
+    <style>
+        :root {
+            --brand-green: #00FF00;
+            --bg-dark: #0a0a0a;
+            --panel-bg: #111111;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding: 20px; }
+        header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        h1 { color: var(--brand-green); text-transform: uppercase; letter-spacing: 2px; }
+        
+        .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .upload-btn {
+            background-color: var(--brand-green);
+            color: #000;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }
+        input[type="file"] { display: none; }
+        
+        .vision-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; border: 1px solid #333; background: #000; }
+        canvas { width: 100%; height: auto; display: block; }
+        
+        .report-panel { margin-top: 20px; padding: 15px; background: var(--panel-bg); border-left: 3px solid var(--brand-green); display: none; }
+        .trait-category { margin-top: 15px; margin-bottom: 5px; color: var(--brand-green); font-weight: bold; text-transform: uppercase; border-bottom: 1px dashed #333; padding-bottom: 5px; }
+        .trait-point { margin-bottom: 8px; font-size: 14px; line-height: 1.4; }
+        .metric-data { font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px; }
+        
+        #loading { text-align: center; color: var(--brand-green); display: none; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>FaceRead Engine</h1>
+        <p style="font-size: 12px; color: var(--text-muted);">V1.0 - Local Hardware Inference</p>
+    </header>
+
+    <div class="controls">
+        <label class="upload-btn">
+            Upload / Take Photo
+            <input type="file" id="imageUpload" accept="image/*" capture="user">
+        </label>
+    </div>
+
+    <div class="vision-container">
+        <!-- Hidden image element to load the file -->
+        <img id="inputImage" style="display:none;" crossorigin="anonymous">
+        <!-- Canvas to draw the image and run analysis -->
+        <canvas id="outputCanvas"></canvas>
+    </div>
+
+    <div id="loading">EXTRACTING 3D MESH DATA...</div>
+
+    <div class="report-panel" id="report">
+        <!-- Report output gets injected here -->
+    </div>
+
+<script>
+    const imageUpload = document.getElementById('imageUpload');
+    const inputImage = document.getElementById('inputImage');
+    const outputCanvas = document.getElementById('outputCanvas');
+    const ctx = outputCanvas.getContext('2d');
+    const reportPanel = document.getElementById('report');
+    const loadingText = document.getElementById('loading');
+
+    // Initialize the FaceMesh CNN
+    const faceMesh = new FaceMesh({locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+    }});
+    
+    faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    
+    faceMesh.onResults(onResults);
+
+    // Handle Image Upload
+    imageUpload.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        
+        reportPanel.style.display = 'none';
+        loadingText.style.display = 'block';
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            inputImage.onload = async () => {
+                outputCanvas.width = inputImage.width;
+                outputCanvas.height = inputImage.height;
+                ctx.drawImage(inputImage, 0, 0);
+                // Send raw image matrix to the CNN
+                await faceMesh.send({image: inputImage});
+            };
+            inputImage.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
+
+    // Distance Calculation (Euclidean)
+    function calcDistance(p1, p2, width, height) {
+        const dx = (p1.x - p2.x) * width;
+        const dy = (p1.y - p2.y) * height;
+        return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    // Angle Calculation (Degrees)
+    function calcAngle(p1, p2) {
+        const dy = p2.y - p1.y;
+        const dx = p2.x - p1.x;
+        return Math.atan2(dy, dx) * (180 / Math.PI);
+    }
+
+    // Process Inference Results
+    function onResults(results) {
+        loadingText.style.display = 'none';
+        
+        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+            alert("No face detected. Please ensure flat lighting and neutral expression.");
+            return;
+        }
+
+        const landmarks = results.multiFaceLandmarks[0];
+        const w = outputCanvas.width;
+        const h = outputCanvas.height;
+
+        // Draw basic mesh overlay
+        ctx.strokeStyle = '#00FF00';
+        ctx.lineWidth = 1;
+        landmarks.forEach(point => {
+            ctx.beginPath();
+            ctx.arc(point.x * w, point.y * h, 1, 0, 2 * Math.PI);
+            ctx.stroke();
+        });
+
+        // ==========================================
+        // THE MATH ENGINE: Extracting Geometries
+        // ==========================================
+        
+        // 1. fWHR (Bizygomatic width / Upper midface height)
+        const bizygomaticWidth = calcDistance(landmarks[234], landmarks[454], w, h);
+        const midfaceHeight = calcDistance(landmarks[10], landmarks[152], w, h);
+        const fWHR = (bizygomaticWidth / midfaceHeight).toFixed(2);
+
+        // 2. Canthal Tilt (Angle between inner and outer eye corners)
+        // Left Eye (33 to 133), Right Eye (362 to 263). Negative Y is "up" in Canvas.
+        const leftTilt = calcAngle(landmarks[33], landmarks[133]);
+        const rightTilt = calcAngle(landmarks[362], landmarks[263]);
+        const avgTilt = -((leftTilt + rightTilt) / 2).toFixed(1); 
+
+        // 3. Facial Thirds
+        const upperThird = calcDistance(landmarks[10], landmarks[9], w, h); // Approx hairline to brow
+        const middleThird = calcDistance(landmarks[9], landmarks[2], w, h); // Brow to nose base
+        const lowerThird = calcDistance(landmarks[2], landmarks[152], w, h); // Nose base to chin
+        const totalHeight = upperThird + middleThird + lowerThird;
+        const upperPct = ((upperThird / totalHeight) * 100).toFixed(0);
+        const midPct = ((middleThird / totalHeight) * 100).toFixed(0);
+        const lowerPct = ((lowerThird / totalHeight) * 100).toFixed(0);
+
+        // 4. Biological & Health Signs
+        // Eyelid Exposure (Hunter vs Prey eyes)
+        const eyeHeight = calcDistance(landmarks[159], landmarks[145], w, h);
+        const eyeWidth = calcDistance(landmarks[33], landmarks[133], w, h);
+        const eyeRatio = (eyeWidth / eyeHeight).toFixed(2); // Higher means more hooded/squinting
+        
+        // Asymmetry (Left vs Right jaw to nose distance)
+        const leftJawNose = calcDistance(landmarks[4], landmarks[132], w, h);
+        const rightJawNose = calcDistance(landmarks[4], landmarks[361], w, h);
+        const asymmetryScore = (Math.abs(leftJawNose - rightJawNose) / w * 100).toFixed(1);
+
+        // ==========================================
+        // THE RULES ENGINE: Mapping Metrics to Traits
+        // ==========================================
+        let reportHTML = "";
+
+        // -- Temperament & Drive --
+        reportHTML += `<div class="trait-category">Dominance & Drive</div>`;
+        if (fWHR > 0.85) { // Threshold adjusted for normalized canvas coordinates
+            reportHTML += `<div class="trait-point">High Physical Risk Tolerance: High bizygomatic width indicates elevated developmental testosterone. Combative, highly assertive, likely to challenge hierarchies. <span class="metric-data">[fWHR: ${fWHR}]</span></div>`;
+        } else {
+            reportHTML += `<div class="trait-point">Calculated & Diplomatic: Narrower structural proportions indicate a preference for stability, familiar environments, and strategic avoidance of unnecessary conflict. <span class="metric-data">[fWHR: ${fWHR}]</span></div>`;
+        }
+
+        // -- Mental Processing (Thirds) --
+        reportHTML += `<div class="trait-category">Intellectual Architecture</div>`;
+        if (upperPct > 35) {
+            reportHTML += `<div class="trait-point">Abstract Systematizer: Dominant upper third points to heavy overthinking, high theoretical processing, and a tendency to get detached in abstract models. <span class="metric-data">[Upper Third: ${upperPct}%]</span></div>`;
+        } else if (lowerPct > 35) {
+            reportHTML += `<div class="trait-point">Instinct & Execution: Dominant lower third indicates a highly physical, action-oriented approach. Prioritizes immediate material execution over endless planning. <span class="metric-data">[Lower Third: ${lowerPct}%]</span></div>`;
+        } else {
+            reportHTML += `<div class="trait-point">Balanced Processing: Even distribution across facial thirds suggests a stable transition from thought, to ambition, to physical execution.</div>`;
+        }
+
+        // -- Perception & Social Dynamics --
+        reportHTML += `<div class="trait-category">Perception & Social Dynamics</div>`;
+        if (avgTilt > 2) {
+            reportHTML += `<div class="trait-point">The Optimistic Predator: Positive canthal tilt indicates high baseline expectations, assertiveness, and a subconscious prioritizing of one's own interests over the group consensus. <span class="metric-data">[Canthal Tilt: +${avgTilt}°]</span></div>`;
+        } else if (avgTilt < -2) {
+            reportHTML += `<div class="trait-point">The Critical Analyst: Negative canthal tilt reveals a highly pessimistic, flaw-detecting mindset. Extremely accurate in work, but highly critical of self and others. <span class="metric-data">[Canthal Tilt: ${avgTilt}°]</span></div>`;
+        } else {
+            reportHTML += `<div class="trait-point">Neutral Perception: Pragmatic and balanced worldview, neither overly naive nor excessively critical. <span class="metric-data">[Canthal Tilt: ${avgTilt}°]</span></div>`;
+        }
+
+        // -- Biological Signs & Inner Persona --
+        reportHTML += `<div class="trait-category">Biological State & Persona Split</div>`;
+        if (eyeRatio > 3.0) {
+            reportHTML += `<div class="trait-point">Hooded / Hunter Eyes: Heavy upper eyelid skin indicates an intensely observant, guarded, and analytical nature. Highly resistant to manipulation. <span class="metric-data">[Eye H/W Ratio: ${eyeRatio}]</span></div>`;
+        } else {
+            reportHTML += `<div class="trait-point">Exposed / Prey Eyes: High eyelid exposure indicates emotional generosity, rapid excitability, and open receptivity to social stimulus. <span class="metric-data">[Eye H/W Ratio: ${eyeRatio}]</span></div>`;
+        }
+
+        if (asymmetryScore > 2.5) {
+            reportHTML += `<div class="trait-point">High Asymmetry Split: Noticeable difference between the left (private) and right (public) face. Suggests the conscious construction of a public mask that differs heavily from the true internal self. <span class="metric-data">[Asymmetry: ${asymmetryScore}% variance]</span></div>`;
+        } else {
+            reportHTML += `<div class="trait-point">Symmetrical Integration: High congruence between private thoughts and public actions. <span class="metric-data">[Asymmetry: ${asymmetryScore}% variance]</span></div>`;
+        }
+
+        reportPanel.innerHTML = reportHTML;
+        reportPanel.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
