@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FaceRead | Brutal Physiognomy Engine V2.0</title>
+    <title>FaceRead | Brutal Physiognomy Engine V2.1</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     
@@ -14,23 +14,26 @@
         header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 15px; }
         h1 { color: var(--brand); letter-spacing: 1px; font-size: 20px; margin-bottom: 5px;}
         
-        .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 10px; }
         .upload-btn { background: #111; color: var(--brand); border: 1px solid var(--brand); padding: 12px 5px; text-align: center; text-transform: uppercase; cursor: pointer; font-size: 11px; font-weight: bold; }
         .upload-btn:hover { background: var(--brand); color: #000; }
         input[type="file"] { display: none; }
         
+        #executeBtn { width: 100%; background: var(--alert); color: #FFF; border: none; padding: 15px; font-size: 16px; font-weight: bold; text-transform: uppercase; cursor: pointer; margin-bottom: 20px; display: none; letter-spacing: 2px; }
+        #executeBtn:hover { background: #CC0022; }
+
         .vision-container { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; }
-        .canvas-wrapper { position: relative; min-width: 150px; flex: 1; border: 1px solid #333; background: #000; }
+        .canvas-wrapper { position: relative; min-width: 150px; flex: 1; border: 1px solid #333; background: #000; min-height: 150px; }
         canvas { width: 100%; height: auto; display: block; }
-        .angle-label { position: absolute; top: 2px; left: 4px; color: var(--brand); font-size: 10px; background: rgba(0,0,0,0.7); padding: 2px; }
+        .angle-label { position: absolute; top: 2px; left: 4px; color: var(--brand); font-size: 10px; background: rgba(0,0,0,0.7); padding: 2px; z-index: 10; }
         
-        .report-panel { background: var(--panel); border: 1px solid #222; display: none; }
+        .report-panel { background: var(--panel); border: 1px solid #222; display: none; margin-top: 10px; }
         .section-header { background: #111; color: var(--brand); padding: 8px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #333; border-top: 1px solid #333; margin-top: 10px; }
         .trait-block { padding: 10px; border-bottom: 1px dashed #222; }
         .trait-title { color: #FFF; font-weight: bold; margin-bottom: 4px; font-size: 14px; }
         .trait-desc { color: #AAA; line-height: 1.5; }
         .metric { color: #555; font-size: 10px; display: block; margin-top: 4px; }
-        .alert-text { color: var(--alert); font-weight: bold; }
+        .alert-text { color: var(--brand); font-weight: bold; }
         
         #loading { text-align: center; color: var(--brand); display: none; font-weight: bold; margin: 20px 0; animation: blink 1s infinite; }
         @keyframes blink { 0%, 100% {opacity: 1;} 50% {opacity: 0.3;} }
@@ -39,15 +42,17 @@
 <body>
 
     <header>
-        <h1>FaceRead // Engine V2.0</h1>
+        <h1>FaceRead // Engine V2.1</h1>
         <p style="color: #666;">High-Dimensional Morphopsychology Matrix</p>
     </header>
 
     <div class="upload-grid">
-        <label class="upload-btn">Front<input type="file" id="up-front" accept="image/*"></label>
-        <label class="upload-btn">L-Profile<input type="file" id="up-left" accept="image/*"></label>
-        <label class="upload-btn">R-Profile<input type="file" id="up-right" accept="image/*"></label>
+        <label class="upload-btn" id="lbl-front">Front<input type="file" id="up-front" accept="image/*"></label>
+        <label class="upload-btn" id="lbl-left">L-Profile<input type="file" id="up-left" accept="image/*"></label>
+        <label class="upload-btn" id="lbl-right">R-Profile<input type="file" id="up-right" accept="image/*"></label>
     </div>
+
+    <button id="executeBtn">Execute Analysis</button>
 
     <div class="vision-container">
         <div class="canvas-wrapper"><div class="angle-label">FRONT</div><canvas id="canv-front"></canvas></div>
@@ -55,84 +60,111 @@
         <div class="canvas-wrapper"><div class="angle-label">R-PROF</div><canvas id="canv-right"></canvas></div>
     </div>
     
-    <img id="bufferImg" style="display:none;">
-    <div id="loading">EXECUTING HEURISTIC PIPELINE...</div>
+    <div id="loading">EXTRACTING CRANIAL GEOMETRY...</div>
     <div class="report-panel" id="report"></div>
 
 <script>
     const inputs = { front: document.getElementById('up-front'), left: document.getElementById('up-left'), right: document.getElementById('up-right') };
     const canvases = { front: document.getElementById('canv-front'), left: document.getElementById('canv-left'), right: document.getElementById('canv-right') };
-    const bufferImg = document.getElementById('bufferImg');
+    const executeBtn = document.getElementById('executeBtn');
     const loading = document.getElementById('loading');
     const report = document.getElementById('report');
-
-    let metrics = { front: null, left: null, right: null };
+    
+    // Store original image data to run inference on later
+    let sourceImages = { front: null, left: null, right: null };
+    let frontMetrics = null;
 
     const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
     faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    faceMesh.onResults(processFrontResults);
 
-    let currentAngle = '';
-    faceMesh.onResults((res) => processResults(res, currentAngle));
-
-    // Handle Uploads
+    // Handle Image Uploads (Draw to canvas immediately, but do NOT analyze yet)
     Object.keys(inputs).forEach(angle => {
         inputs[angle].addEventListener('change', (e) => {
             const file = e.target.files[0];
             if(!file) return;
-            loading.style.display = 'block';
-            report.style.display = 'none';
-            currentAngle = angle;
+            
+            // Mark button as uploaded
+            document.getElementById(`lbl-${angle}`).style.background = '#333';
             
             const reader = new FileReader();
             reader.onload = (event) => {
-                bufferImg.onload = async () => {
+                const img = new Image();
+                img.onload = () => {
                     const canv = canvases[angle];
                     const ctx = canv.getContext('2d');
-                    canv.width = bufferImg.width;
-                    canv.height = bufferImg.height;
-                    ctx.drawImage(bufferImg, 0, 0);
-                    await faceMesh.send({image: bufferImg});
+                    canv.width = img.width;
+                    canv.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    sourceImages[angle] = img;
+                    
+                    // Show Execute button once Front is uploaded (Front is mandatory)
+                    if(sourceImages.front) {
+                        executeBtn.style.display = 'block';
+                    }
                 };
-                bufferImg.src = event.target.result;
+                img.src = event.target.result;
             }
             reader.readAsDataURL(file);
         });
     });
 
+    // Run Analysis Button Click
+    executeBtn.addEventListener('click', async () => {
+        if (!sourceImages.front) {
+            alert("Front image is required to extract the geometric matrix.");
+            return;
+        }
+        
+        executeBtn.style.display = 'none';
+        report.style.display = 'none';
+        loading.style.display = 'block';
+        
+        // Send the Front image to the CNN
+        await faceMesh.send({image: sourceImages.front});
+    });
+
     function calcDist(p1, p2, w, h) { return Math.sqrt(Math.pow((p1.x - p2.x)*w, 2) + Math.pow((p1.y - p2.y)*h, 2)); }
     function calcAngle(p1, p2) { return Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI); }
 
-    function processResults(results, angle) {
+    function processFrontResults(results) {
         loading.style.display = 'none';
-        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
+        
+        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+            alert("ERROR: Could not detect facial landmarks on the Front image. Please ensure good lighting.");
+            executeBtn.style.display = 'block';
+            return;
+        }
         
         const lm = results.multiFaceLandmarks[0];
-        const canv = canvases[angle];
+        const canv = canvases.front;
         const ctx = canv.getContext('2d');
         const w = canv.width, h = canv.height;
 
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'; ctx.lineWidth = 0.5;
+        // Draw mesh on front canvas
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)'; ctx.lineWidth = 1.5;
         lm.forEach(p => { ctx.beginPath(); ctx.arc(p.x*w, p.y*h, 1, 0, 2*Math.PI); ctx.stroke(); });
 
-        if(angle === 'front') {
-            metrics.front = {
-                fwhr: calcDist(lm[234], lm[454], w, h) / calcDist(lm[10], lm[152], w, h),
-                jawWidth: calcDist(lm[132], lm[361], w, h) / calcDist(lm[234], lm[454], w, h),
-                lTilt: calcAngle(lm[33], lm[133]), rTilt: calcAngle(lm[362], lm[263]),
-                innerFaceRatio: calcDist(lm[33], lm[362], w, h) / calcDist(lm[234], lm[454], w, h),
-                eyeSpacing: calcDist(lm[133], lm[362], w, h) / calcDist(lm[33], lm[133], w, h),
-                browSet: calcDist(lm[159], lm[52], w, h) / h,
-                lUpperLip: calcDist(lm[0], lm[13], w, h), lLowerLip: calcDist(lm[14], lm[17], w, h),
-                mouthWidth: calcDist(lm[61], lm[291], w, h) / calcDist(lm[234], lm[454], w, h),
-                asymmetry: Math.abs(calcDist(lm[4], lm[132], w, h) - calcDist(lm[4], lm[361], w, h)) / w
-            };
-            generateBrutalReport();
-        }
+        // Calculate Metrics
+        frontMetrics = {
+            fwhr: calcDist(lm[234], lm[454], w, h) / calcDist(lm[10], lm[152], w, h),
+            jawWidth: calcDist(lm[132], lm[361], w, h) / calcDist(lm[234], lm[454], w, h),
+            lTilt: calcAngle(lm[33], lm[133]), rTilt: calcAngle(lm[362], lm[263]),
+            innerFaceRatio: calcDist(lm[33], lm[362], w, h) / calcDist(lm[234], lm[454], w, h),
+            eyeSpacing: calcDist(lm[133], lm[362], w, h) / calcDist(lm[33], lm[133], w, h),
+            browSet: calcDist(lm[159], lm[52], w, h) / h,
+            lUpperLip: calcDist(lm[0], lm[13], w, h), lLowerLip: calcDist(lm[14], lm[17], w, h),
+            asymmetry: Math.abs(calcDist(lm[4], lm[132], w, h) - calcDist(lm[4], lm[361], w, h)) / w
+        };
+        
+        generateBrutalReport();
+        executeBtn.style.display = 'block';
+        executeBtn.innerText = "RE-CALCULATE MATRIX";
     }
 
     function generateBrutalReport() {
-        if(!metrics.front) return;
-        const f = metrics.front;
+        if(!frontMetrics) return;
+        const f = frontMetrics;
         let html = "";
 
         const addBlock = (title, desc, data, alert=false) => {
@@ -143,8 +175,8 @@
             </div>`;
         };
 
-        // 1. TEMPERAMENT & ARCHETYPE (Shape Math)
-        html += `<div class="section-header">I. Core Architecture</div>`;
+        // 1. TEMPERAMENT & ARCHETYPE
+        html += `<div class="section-header">I. Core Architecture & Dominance</div>`;
         if (f.fwhr > 1.85 && f.jawWidth > 0.8) {
             addBlock("Mars / Earth Archetype (Warrior/Farmer)", "High bone density, wide jaw, and dominant cheekbones. Indicates elevated testosterone exposure, high confrontation threshold, results-focused materialism, and stoic determination. Highly decisive, often blunt.", `[fWHR: ${f.fwhr.toFixed(2)}] [Jaw Ratio: ${f.jawWidth.toFixed(2)}]`);
         } else if (f.jawWidth > 0.85 && f.fwhr < 1.7) {
@@ -153,8 +185,8 @@
             addBlock("Mercury / Sun Archetype (Magician/Aristocrat)", "Narrower, more refined geometry. High sensitivity to external stimuli, rapid cognitive processing. Relies on intellect, wit, and systems thinking over brute physical execution.", `[fWHR: ${f.fwhr.toFixed(2)}]`);
         }
 
-        // 2. SOCIAL DYNAMICS & DARK TRIAD INDICATORS
-        html += `<div class="section-header">II. Social & Predatory Dynamics</div>`;
+        // 2. SOCIAL DYNAMICS
+        html += `<div class="section-header">II. Perception & Tolerance</div>`;
         const avgTilt = -((f.lTilt + f.rTilt) / 2);
         if (avgTilt > 1.5) {
             addBlock("Positive Canthal Tilt: The Rebellious Predator", "Subconsciously prioritizes own interests over group consensus. Highly confident, optimistic, but completely ruthless when challenged. Expects to win.", `[Tilt: +${avgTilt.toFixed(1)}°]`);
@@ -168,29 +200,29 @@
             addBlock("Wide-Set Eyes: Broad Tolerance", "Big-picture focused. Tolerant of deviations and chaos, but heavily misses critical operational details.", `[Spacing Ratio: ${f.eyeSpacing.toFixed(2)}]`);
         }
 
+        // 3. STRESS IMMUNITY
+        html += `<div class="section-header">III. Stress & Internal Capacity</div>`;
         if (f.innerFaceRatio < 0.45) {
             addBlock("Retracted Inner Face: Stress Immune", "Cold, aloof, and capable of extreme compartmentalization. Does not easily absorb the emotional panic of others. Often perceived as unfeeling or Machiavellian under pressure.", `[Inner Face Vol: ${f.innerFaceRatio.toFixed(2)}]`);
+        } else {
+            addBlock("Exposed Inner Face: Highly Reactive", "High emotional receptivity. Rapidly absorbs environmental stress and social dynamics. Driven by external feedback.", `[Inner Face Vol: ${f.innerFaceRatio.toFixed(2)}]`);
         }
 
-        // 3. CASTE & CAREER ALIGNMENT
-        html += `<div class="section-header">III. Sub-Caste & Career Alignment</div>`;
         if (f.browSet < 0.04) {
-            addBlock("Low-Set Brows: Rapid Execution", "Acts immediately on information. Low tolerance for endless deliberation. Direct, bottom-line focused. Fits the 'Architect' or 'Knight' sub-castes—builds systems and executes violently.", `[Brow Distance: ${f.browSet.toFixed(3)}]`);
-        } else {
-            addBlock("High-Set Brows: Analytical Deliberation", "Refuses to make snap judgments. Requires complete data sets. Fits the 'Tinkerer' or 'Wizard' sub-castes—perfecting the theoretical before touching the material.", `[Brow Distance: ${f.browSet.toFixed(3)}]`);
+            addBlock("Low-Set Brows: Rapid Execution", "Acts immediately on information. Low tolerance for endless deliberation. Direct, bottom-line focused.", `[Brow Distance: ${f.browSet.toFixed(3)}]`);
         }
 
         // 4. MASKS & COMMUNICATION
-        html += `<div class="section-header">IV. Intimacy & Internal State</div>`;
+        html += `<div class="section-header">IV. Persona & Communication</div>`;
         const lipRatio = f.lLowerLip / f.lUpperLip;
         if (lipRatio > 2.0) {
-            addBlock("Thin Upper / Full Lower Lip: The Siloed Self", "Extremely hesitant to express true thoughts to the outside world, but possesses a massive, deeply felt internal sense of self. Stores opinions internally, operates behind a guarded communicative wall.", `[Lip Imbalance Ratio: ${lipRatio.toFixed(2)}]`);
+            addBlock("Thin Upper / Full Lower Lip: The Siloed Self", "Extremely hesitant to express true thoughts to the outside world, but possesses a massive, deeply felt internal sense of self. Stores opinions internally.", `[Lip Imbalance Ratio: ${lipRatio.toFixed(2)}]`);
         }
 
         if (f.asymmetry > 0.025) {
             addBlock("High Asymmetry: Fractured Persona", "Extreme difference between the left (true self) and right (public mask). The public persona is a completely manufactured armor used to navigate the world, entirely distinct from the inner nature.", `[Asymmetry Factor: ${f.asymmetry.toFixed(3)}]`, true);
         } else {
-            addBlock("Symmetrical Integration", "What you see is what you get. Public actions are directly congruent with private thoughts. Low propensity for Machiavellian two-faced behavior.", `[Asymmetry Factor: ${f.asymmetry.toFixed(3)}]`);
+            addBlock("Symmetrical Integration", "What you see is what you get. Public actions are directly congruent with private thoughts. Low propensity for two-faced behavior.", `[Asymmetry Factor: ${f.asymmetry.toFixed(3)}]`);
         }
 
         report.innerHTML = html;
