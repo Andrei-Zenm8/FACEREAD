@@ -41,6 +41,11 @@ const TitanHeuristics = {
         const m = normalizedMesh;
         const traits = {};
 
+        // --- GLOBAL METRICS ---
+        // Define these here so downstream traits don't throw ReferenceErrors
+        const IPD = this.dist(m[33], m[263]);
+        const jawWidth = this.dist(m[132], m[361]);
+
         // ---------------------------------------------------------
         // 1. fWHR (Facial Width-to-Height Ratio)
         // ---------------------------------------------------------
