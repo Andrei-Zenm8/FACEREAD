@@ -1,107 +1,135 @@
 // ============================================================================
-// TITAN ENGINE V8.0: MAIN CONTROLLER (app.js)
-// Connects the webcam, runs MediaPipe, and prints the brutal analysis.
+// TITAN ENGINE V8.5: MAIN CONTROLLER (app.js)
+// Reconnects file uploads, MediaPipe CNN, geometry alignment, and the grid HUD.
 // ============================================================================
 
-// 1. Setup Camera and MediaPipe
-const videoElement = document.createElement('video');
-videoElement.autoplay = true;
-videoElement.playsInline = true;
+// --- I. CORE DOM INITIALIZATION ---
+const inputs = { front: document.getElementById('up-front'), left: document.getElementById('up-left'), right: document.getElementById('up-right') };
+const canvases = { front: document.getElementById('canv-front'), left: document.getElementById('canv-left'), right: document.getElementById('canv-right') };
+const executeBtn = document.getElementById('executeBtn');
+const loading = document.getElementById('loading');
+const reportPanel = document.getElementById('report');
+const reportGrid = document.getElementById('report-grid');
 
-const faceMesh = new FaceMesh({locateFile: (file) => {
-  return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-}});
+let sourceImages = { front: null, left: null, right: null };
+let meshData = { front: null, left: null, right: null };
+let processingQueue = [];
+let currentAngle = null;
 
-faceMesh.setOptions({
-  maxNumFaces: 1,
-  refineLandmarks: true,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5
+// --- II. MEDIAPIPE CNN CONFIGURATION ---
+const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.05, minTrackingConfidence: 0.05 });
+faceMesh.onResults(handleResults);
+
+// --- III. IMAGE UPLOAD & CANVAS RENDERING ---
+Object.keys(inputs).forEach(angle => {
+    if (!inputs[angle]) return;
+    inputs[angle].addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const lbl = document.getElementById(`lbl-${angle}`);
+        if(lbl) {
+            lbl.style.background = '#222';
+            lbl.style.color = '#FFF';
+            lbl.innerText = `${angle.toUpperCase()}_LOADED`;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canv = canvases[angle];
+                const ctx = canv.getContext('2d');
+                canv.width = img.width;
+                canv.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                sourceImages[angle] = img;
+                if(sourceImages.front && executeBtn) executeBtn.style.display = 'block';
+            };
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
 });
 
-// 2. Process the Results
-faceMesh.onResults((results) => {
-  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-    const rawMesh = results.multiFaceLandmarks[0];
-    
-    // Check if the Geometry engine is loaded to normalize lens distortion
-    const meshToAnalyze = (typeof TitanGeometry !== 'undefined') 
-        ? TitanGeometry.normalize(rawMesh) 
-        : rawMesh;
+// --- IV. EXECUTION PIPELINE ---
+if (executeBtn) {
+    executeBtn.addEventListener('click', () => {
+        executeBtn.style.display = 'none';
+        reportPanel.style.display = 'none';
+        loading.style.display = 'block';
+        processingQueue = ['front', 'left', 'right'].filter(a => sourceImages[a]);
+        processNext();
+    });
+}
 
-    // Run the 15-point brutal matrix
-    const analysis = TitanHeuristics.analyzeFace(meshToAnalyze);
-    
-    // Display results on screen
-    displayResults(analysis);
-  }
-});
-
-// 3. Start Webcam
-navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-  videoElement.srcObject = stream;
-  videoElement.play();
-  
-  // Send video frames to the Face Mesh engine continuously
-  async function sendFrame() {
-    await faceMesh.send({image: videoElement});
-    requestAnimationFrame(sendFrame);
-  }
-  sendFrame();
-}).catch(err => {
-    console.error("Camera access denied or unavailable:", err);
-    alert("Please allow camera access for the Titan Engine to work.");
-});
-
-// 4. Render the Data Matrix to the Screen
-function displayResults(traits) {
-    // Look for an existing output box, or create a heads-up display (HUD)
-    let outputBox = document.getElementById('titan-hud');
-    if (!outputBox) {
-        outputBox = document.createElement('div');
-        outputBox.id = 'titan-hud';
-        // Styling it to match a dark, terminal/matrix vibe, expanded for grid
-        outputBox.style.cssText = `
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            left: 20px; /* Expanded left to give the 31-point grid room to breathe */
-            bottom: 20px; /* Expanded bottom */
-            background: rgba(10, 15, 20, 0.95); 
-            color: #00ffcc; 
-            padding: 20px; 
-            font-family: monospace; 
-            z-index: 9999; 
-            border: 1px solid #00ffcc; 
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
-            overflow-y: auto;
-            border-radius: 5px;
-        `;
-        document.body.appendChild(outputBox);
+async function processNext() {
+    if (processingQueue.length === 0) {
+        loading.style.display = 'none';
+        executeBtn.style.display = 'block';
+        executeBtn.innerText = "RECALCULATE TITAN MATRIX";
+        buildSpectrumMatrix();
+        return;
     }
+    currentAngle = processingQueue.shift();
+    loading.innerText = `EXTRACTING [${currentAngle.toUpperCase()}] SPATIAL DATA...`;
+    try { await faceMesh.send({image: sourceImages[currentAngle]}); } 
+    catch (err) { console.warn(`CNN lost track on ${currentAngle}`); meshData[currentAngle] = null; processNext(); }
+}
 
-    // Main header
-    let html = `<h3 style="margin-top:0; text-align:center; font-size: 20px; letter-spacing: 2px;">[ TITAN DEEP-SCAN ACTIVE ]</h3><hr style="border-color:#00ffcc; margin-bottom:20px;">`;
+function handleResults(results) {
+    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        const lm = results.multiFaceLandmarks[0];
+        meshData[currentAngle] = lm;
+        const canv = canvases[currentAngle];
+        const ctx = canv.getContext('2d');
+        ctx.strokeStyle = currentAngle === 'front' ? 'rgba(0, 255, 65, 0.8)' : 'rgba(255, 0, 60, 0.8)'; 
+        ctx.lineWidth = 1.0;
+        lm.forEach(p => { ctx.beginPath(); ctx.arc(p.x*canv.width, p.y*canv.height, 1, 0, 2*Math.PI); ctx.stroke(); });
+    } else { meshData[currentAngle] = null; }
+    processNext();
+}
+
+// --- V. THE TITAN MATRIX BUILDER (31-POINT GRID) ---
+function buildSpectrumMatrix() {
+    if (!meshData.front) return alert("CRITICAL ERROR: Frontal mesh extraction failed. Ensure face is fully illuminated and visible.");
     
-    // START GRID CONTAINER
-    html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">`;
+    const rawMesh = meshData.front;
+    const width = canvases.front.width;
+    const height = canvases.front.height;
     
+    // Step 1: Align and normalize via geometry.js
+    const alignmentResult = (typeof TitanGeometry !== 'undefined') 
+        ? TitanGeometry.alignAndNormalizeFace(rawMesh, width, height) 
+        : { mesh: rawMesh, metrics: {} };
+
+    // Step 2: Run all 31 metrics through heuristics.js
+    const traits = TitanHeuristics.analyzeFace(alignmentResult.mesh);
+
+    // Step 3: Build the grid layout for the UI
+    let html = "";
     for (const [key, data] of Object.entries(traits)) {
-        // Formats camelCase keys nicely (e.g., riskTolerance -> RISK TOLERANCE)
         const formattedTitle = key.replace(/([A-Z])/g, ' $1').toUpperCase();
         
-        // Individual Trait Cards
         html += `
-            <div style="background: rgba(0, 255, 204, 0.05); border-left: 3px solid #ff3366; padding: 12px; border-radius: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-                <strong style="color:#ff3366; display:block; margin-bottom:6px; font-size: 14px;">${formattedTitle}</strong>
-                <span style="color:#fff; font-weight:bold; font-size: 13px;">SCORE: ${data.score}</span> <br> 
-                <span style="color:#a0a0a0; font-size: 12px; display:inline-block; margin-top:5px; line-height: 1.4;">> ${data.description}</span>
+        <div class="trait-row">
+            <div class="trait-header">
+                <span class="trait-name">${formattedTitle}</span>
+                <span class="trait-id">TITAN_V8.5</span>
             </div>
-        `;
+            <div class="data-bar-bg">
+                <div class="data-bar-fill" style="width: 100%"></div>
+            </div>
+            <div class="trait-body">
+                <div class="reading-box">
+                    <strong style="color: var(--brand);">${data.score}</strong><br>
+                    <span style="color: #bbb; display: inline-block; margin-top: 5px;">> ${data.description}</span>
+                </div>
+            </div>
+        </div>`;
     }
 
-    // END GRID CONTAINER
-    html += `</div>`;
-
-    outputBox.innerHTML = html;
+    reportGrid.innerHTML = html;
+    reportPanel.style.display = 'block';
+    reportPanel.scrollIntoView({ behavior: 'smooth' });
 }
