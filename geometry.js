@@ -16,6 +16,42 @@ const TitanGeometry = {
     },
 
     /**
+     * Standard 2D Distance (Flattened Plane for straight-on proportions)
+     */
+    calc2D: function(p1, p2) {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        return Math.sqrt(dx*dx + dy*dy);
+    },
+
+    /**
+     * Find the exact spatial midpoint between two landmarks
+     */
+    getMidpoint: function(p1, p2) {
+        return {
+            x: (p1.x + p2.x) / 2,
+            y: (p1.y + p2.y) / 2,
+            z: (p1.z + p2.z) / 2
+        };
+    },
+
+    /**
+     * Calculate the interior angle between three points (Required for Jaw/Brow metrics)
+     */
+    calcAngle: function(p1, p2, p3) {
+        const a = this.calc3D(p2, p3);
+        const b = this.calc3D(p1, p3);
+        const c = this.calc3D(p1, p2);
+        
+        // Law of Cosines to extract the angle at vertex p2
+        let cosVal = (a*a + c*c - b*b) / (2 * a * c);
+        // Clamp to prevent floating point NaN errors
+        cosVal = Math.max(-1, Math.min(1, cosVal)); 
+        
+        return Math.acos(cosVal) * (180 / Math.PI);
+    },
+
+    /**
      * The Core Normalization Engine. 
      * Undoes Camera Angle, Scales to IPD, and Flattens Lens Distortion.
      */
