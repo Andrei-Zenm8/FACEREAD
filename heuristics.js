@@ -179,6 +179,91 @@ const TitanHeuristics = {
             "Highly projecting chin. Strong marker for unyielding behavioral traits and stubbornness.",
             "Extreme mentalis projection. Maximum indicator of combative willpower and refusal to submit."
         ]);
+        // ---------------------------------------------------------
+        // 11. Eye Depth (Orbital Set / Z-Axis Processing)
+        // ---------------------------------------------------------
+        const eyeDepth = Math.abs(m[168].z - m[159].z);
+        traits.eyeDepth = this.scoreTrait10(eyeDepth, 0, 15, [
+            "Extremely shallow/protruding orbits. Correlates with high emotional reactivity and low threshold for environmental stress.",
+            "Significantly shallow orbits. Indicates a baseline of high sensitivity to external stimuli.",
+            "Moderately shallow orbits. Below average capacity to mask internal states.",
+            "Slightly shallow orbits. Mild tendency toward reactive processing.",
+            "Standard orbital depth. Normal environmental stress tolerance.",
+            "Standard orbital depth. Balanced reactive baseline.",
+            "Slightly deep-set orbits. Elevated threshold for emotional restraint.",
+            "Deep-set orbits. Indicates a strong baseline for guarded, internal processing and observation.",
+            "Highly deep-set orbits. Strong marker for low reactivity and high analytical detachment under stress.",
+            "Extremely deep-set orbits. Maximum indicator of predatory/hyper-focused visual processing and extreme emotional masking."
+        ]);
+
+        // ---------------------------------------------------------
+        // 12. Mouth Width (Inter-commissural Distance vs IPD)
+        // ---------------------------------------------------------
+        const mouthRatio = this.dist(m[61], m[291]) / this.dist(m[133], m[362]);
+        traits.mouthWidth = this.scoreTrait10(mouthRatio, 0.7, 1.3, [
+            "Extremely narrow mouth. Correlates with severe internalization of processing and resource conservation.",
+            "Highly narrow mouth. Indicates strong preference for independent, uncommunicative problem solving.",
+            "Narrow mouth. Below average baseline for verbal externalization.",
+            "Slightly narrow mouth. Mildly reserved communicative baseline.",
+            "Standard mouth width. Normal expressive baseline.",
+            "Standard mouth width. Balanced communicative traits.",
+            "Slightly wide mouth. Elevated baseline for social externalization.",
+            "Wide mouth. Indicates strong preference for verbal processing and social engagement.",
+            "Highly wide mouth. Strong marker for continuous externalization and high communicative drive.",
+            "Extremely wide mouth. Maximum indicator of hyper-expressive and highly socialized behavioral patterns."
+        ]);
+
+        // ---------------------------------------------------------
+        // 13. Brow Ridge (Supraorbital Prominence)
+        // ---------------------------------------------------------
+        const browZ = Math.abs(m[168].z - m[10].z);
+        traits.browRidge = this.scoreTrait10(browZ, 5, 25, [
+            "Completely flat supraorbital ridge. Indicates near-zero primitive threat-response baseline.",
+            "Highly diminished brow ridge. Correlates with low baseline physical territoriality.",
+            "Diminished brow ridge. Below average physical imposition traits.",
+            "Slightly diminished brow ridge. Mildly reduced primitive defensive markers.",
+            "Standard brow projection. Normal threat-response baseline.",
+            "Standard brow projection. Balanced territorial instincts.",
+            "Slightly prominent brow ridge. Elevated physical alertness.",
+            "Prominent brow ridge. Indicates high baseline for territoriality and physical readiness.",
+            "Highly prominent brow ridge. Strong marker for primal dominance and immediate physical threat-response.",
+            "Extreme supraorbital projection. Maximum indicator of physical imposition and highly territorial instincts."
+        ]);
+
+        // ---------------------------------------------------------
+        // 14. Philtrum Length (Impulse Control)
+        // ---------------------------------------------------------
+        const philtrumRatio = this.dist(m[2], m[0]) / Math.abs(m[152].y - m[10].y);
+        traits.philtrum = this.scoreTrait10(philtrumRatio, 0.05, 0.12, [
+            "Extremely short philtrum. Strongly correlates with highly impulsive behavior and instant gratification seeking.",
+            "Highly short philtrum. Indicates a low threshold for delayed gratification.",
+            "Short philtrum. Below average baseline for stoic restraint.",
+            "Slightly short philtrum. Mild tendency toward reactive decision making.",
+            "Standard philtrum length. Normal impulse control baseline.",
+            "Standard philtrum length. Balanced emotional restraint.",
+            "Slightly long philtrum. Elevated capacity for delayed gratification.",
+            "Long philtrum. Indicates strong emotional stoicism and resistance to impulsive action.",
+            "Highly long philtrum. Strong marker for emotional detachment and sustained, methodical execution.",
+            "Extremely long philtrum. Maximum indicator of hyper-stoic behavioral patterns and near-total emotional suppression."
+        ]);
+
+        // ---------------------------------------------------------
+        // 15. Fluctuating Asymmetry (Developmental Variance)
+        // ---------------------------------------------------------
+        // Calculates delta between left jaw-to-midline and right jaw-to-midline
+        const asymmetryVal = Math.abs(this.dist(m[132], m[1]) - this.dist(m[361], m[1]));
+        traits.asymmetry = this.scoreTrait10(asymmetryVal, 0, 10, [
+            "Perfect structural symmetry. Correlates with optimal biological stability during development.",
+            "High structural symmetry. Indicates standard, predictable biological and neurological baselines.",
+            "Standard symmetry. Normal baseline variations.",
+            "Slightly asymmetrical. Minor developmental or structural variances.",
+            "Moderate asymmetry. Average environmental or developmental impact markers.",
+            "Moderate asymmetry. Visible structural variations, standard baseline.",
+            "Elevated asymmetry. Indicates increased biological or environmental stress during developmental phases.",
+            "High asymmetry. Correlates with distinct neurological or behavioral compensation patterns.",
+            "Severe asymmetry. Strong marker for significant developmental friction; often linked to erratic behavioral baselines.",
+            "Extreme fluctuating asymmetry. Maximum indicator of structural instability and highly unpredictable baseline responses."
+        ]);
 
         // Note: For brevity in the immediate UI phase, we've implemented the core 10 metrics.
         // We will expand the final 5 (Eye Depth, Mouth Width, Brow Ridge, Philtrum, Asymmetry) 
