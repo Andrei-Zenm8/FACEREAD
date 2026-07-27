@@ -111,6 +111,15 @@ function buildSpectrumMatrix() {
     for (const [key, data] of Object.entries(traits)) {
         const formattedTitle = key.replace(/([A-Z])/g, ' $1').toUpperCase();
         
+        // 1. Calculate dynamic percentage (safeguard if data.pct is missing, falls back to score out of 10)
+        let pct = data.pct || ((parseFloat(data.score) || 5) * 10);
+        if (pct > 100) pct = 100;
+        
+        // 2. Dynamic Tier Coloring (Extreme=Red, Average=Green, Low=Blue)
+        let barColor = 'var(--brand)'; 
+        if (pct >= 80) barColor = 'var(--alert)'; 
+        else if (pct <= 30) barColor = '#0088ff'; 
+        
         html += `
         <div class="trait-row">
             <div class="trait-header">
@@ -118,11 +127,11 @@ function buildSpectrumMatrix() {
                 <span class="trait-id">TITAN_V8.5</span>
             </div>
             <div class="data-bar-bg">
-                <div class="data-bar-fill" style="width: 100%"></div>
+                <div class="data-bar-fill" style="width: ${pct}%; background: ${barColor};"></div>
             </div>
             <div class="trait-body">
                 <div class="reading-box">
-                    <strong style="color: var(--brand);">${data.score}</strong><br>
+                    <strong style="color: ${barColor};">${data.score}</strong><br>
                     <span style="color: #bbb; display: inline-block; margin-top: 5px;">> ${data.description}</span>
                 </div>
             </div>
