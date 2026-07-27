@@ -264,6 +264,310 @@ const TitanHeuristics = {
             "Severe asymmetry. Strong marker for significant developmental friction; often linked to erratic behavioral baselines.",
             "Extreme fluctuating asymmetry. Maximum indicator of structural instability and highly unpredictable baseline responses."
         ]);
+        // ============================================================================
+        // ADVANCED PREDICTIVE ABSTRACTIONS (BLOCK 1)
+        // ============================================================================
+
+        // ---------------------------------------------------------
+        // 16. Political Alignment (Ideological Baseline / Motive Temperament)
+        // ---------------------------------------------------------
+        // Combines fWHR (Facial Width-to-Height) and Jaw Angularity to calculate 
+        // the preference for hierarchy/authority vs. egalitarianism.
+        const ideologyScore = (faceWidth / faceHeight) * jawRatio;
+        traits.politicalAlignment = this.scoreTrait10(ideologyScore, 2.8, 6.6, [
+            "Extreme Egalitarian Baseline. Biologically highly predisposed to anti-hierarchical and ultra-progressive ideologies.",
+            "Strong Egalitarian Baseline. Correlates with distinct preferences for decentralized authority and progressive systems.",
+            "Moderate Egalitarian. Default psychological stance favors collective consensus over strict hierarchy.",
+            "Leaning Egalitarian. Mild preference for democratic resource distribution.",
+            "Centrist/Neutral Baseline. Highly adaptable ideological framework; pragmatism outweighs rigid ideology.",
+            "Centrist/Neutral Baseline. Situationally dependent ideological alignment.",
+            "Leaning Hierarchical. Mild preference for established systems and defined authority structures.",
+            "Moderate Hierarchical. Default stance heavily favors meritocracy, tradition, and structured authority.",
+            "Strong Hierarchical Baseline. Correlates with rigid conservative preferences and high respect for established institutional forms.",
+            "Extreme Hierarchical Baseline. Maximum biological predisposition toward rigid authority, strict traditionalism, and stratified systems."
+        ]);
+
+        // ---------------------------------------------------------
+        // 17. Childhood Experience (Developmental Friction)
+        // ---------------------------------------------------------
+        // Uses microscopic FA (Fluctuating Asymmetry) across the mid-face to predict 
+        // environmental/biological stress during early development.
+        const developmentalStress = asymmetryVal * (this.dist(m[33], m[263]) / IPD);
+        traits.childhoodExperience = this.scoreTrait10(developmentalStress, 0, 12, [
+            "Extremely low developmental friction. Indicates a highly stable, predictable, and low-stress early childhood environment.",
+            "Very low developmental friction. Correlates with consistent nurturing and biological stability during formative years.",
+            "Low developmental friction. Standard, highly stable early environmental baseline.",
+            "Below average friction. Relatively smooth developmental trajectory with minimal disruptions.",
+            "Standard developmental baseline. Normal mix of stability and environmental challenges.",
+            "Standard developmental baseline. Average psychological friction during early growth.",
+            "Elevated developmental friction. Indicates noticeable environmental, biological, or emotional turbulence during formative years.",
+            "High developmental friction. Strong marker for a highly unstable or stressful early childhood environment.",
+            "Severe developmental friction. Correlates with deeply chaotic, disrupted, or highly challenging early circumstances.",
+            "Extreme developmental friction. Maximum biological marker for severe structural and environmental trauma during development."
+        ]);
+
+        // ---------------------------------------------------------
+        // 18. Parental Imprint (Maternal vs Paternal Dominance)
+        // ---------------------------------------------------------
+        // Compares left auricular/hemisphere volume (maternal) vs right (paternal).
+        const leftHemisphereVol = this.dist(m[234], m[10]) + this.dist(m[234], m[152]);
+        const rightHemisphereVol = this.dist(m[454], m[10]) + this.dist(m[454], m[152]);
+        const parentalImprint = leftHemisphereVol / rightHemisphereVol;
+        traits.parentalImprint = this.scoreTrait10(parentalImprint, 0.85, 1.15, [
+            "Extreme Paternal Imprint. Indicates near-total psychological domination or influence by the father/masculine figure.",
+            "Strong Paternal Imprint. Heavy reliance on the masculine figure for core psychological and behavioral modeling.",
+            "Moderate Paternal Imprint. Father figure was the primary structural authority in early development.",
+            "Slight Paternal Imprint. Mild bias toward masculine behavioral modeling.",
+            "Perfectly Balanced Imprint. Equal psychological integration of both maternal and paternal figures.",
+            "Perfectly Balanced Imprint. Symmetrical developmental influence.",
+            "Slight Maternal Imprint. Mild bias toward feminine behavioral modeling.",
+            "Moderate Maternal Imprint. Mother figure was the primary emotional and structural anchor.",
+            "Strong Maternal Imprint. Heavy reliance on the feminine figure for core psychological modeling.",
+            "Extreme Maternal Imprint. Indicates near-total psychological domination or influence by the mother/feminine figure."
+        ]);
+
+        // ---------------------------------------------------------
+        // 19. Romantic Relationship Behavior (Amativeness / Conjugality)
+        // ---------------------------------------------------------
+        // Calculates lip volume (inner mucous membrane distance) combined with chin indentation.
+        const lipVolume = this.dist(m[13], m[14]) / this.dist(m[61], m[291]);
+        const chinIndentation = Math.abs(m[175].z - m[152].z);
+        const amativenessScore = lipVolume + (chinIndentation * 0.5);
+        traits.romanticBehavior = this.scoreTrait10(amativenessScore, 0.1, 0.5, [
+            "Extremely detached. Biologically predisposed to severe emotional isolation; views romantic attachment as a strict utility.",
+            "Highly stoic baseline. Intensely guarded in romance; prioritizes extreme autonomy over emotional enmeshment.",
+            "Reserved baseline. Highly selective, slow to attach, and maintains strict emotional boundaries.",
+            "Pragmatic baseline. Balanced, conditional attachment; values independence alongside partnership.",
+            "Standard conjugate baseline. Normal romantic attachment and pair-bonding instincts.",
+            "Standard conjugate baseline. Stable, predictable affection metrics.",
+            "Elevated amativeness. Strong desire for emotional enmeshment and persistent validation in relationships.",
+            "High amativeness. Intensely passionate baseline; heavily reliant on continuous emotional and physical connection.",
+            "Severe amativeness. Prone to absolute devotion, extreme jealousy, and hyper-fixation on the romantic partner.",
+            "Extreme amativeness. Maximum biological marker for obsessive, consuming, and potentially volatile romantic attachments."
+        ]);
+
+        // ---------------------------------------------------------
+        // 20. Career Alignment (Execution vs. Abstract Vector)
+        // ---------------------------------------------------------
+        // Measures Pyriform (Mental/Artistic) vs. Motive (Action/System) facial proportions.
+        const pyriformRatio = t1 / t3; // Cerebral third vs Instinctual third
+        traits.careerAlignment = this.scoreTrait10(pyriformRatio, 0.6, 1.4, [
+            "Hyper-Kinetic/Physical Execution. Ideal for pure physical labor, combat, or intense kinetic deployment. Zero abstract tolerance.",
+            "Tactical Execution. Excels in immediate, hands-on, crisis-response careers (military, frontline operations).",
+            "Systematic Execution. Strong alignment with direct management, logistics, and hard-metric operational roles.",
+            "Pragmatic Management. Prefers practical, ground-level business execution over theoretical planning.",
+            "Balanced Vector. Capable in both tactical execution and mid-level abstract planning.",
+            "Balanced Vector. Adaptable to varied career environments.",
+            "Abstract Management. Prefers high-level strategy, architectural design, and complex system planning.",
+            "Theoretical/Artistic. Strong alignment with pure creative design, literature, and abstract conceptualization.",
+            "Hyper-Theoretical. Excels exclusively in pure philosophy, advanced mathematics, or isolated creative arts.",
+            "Pure Abstraction. Maximum biological marker for theoretical detachment; entirely unsuited for practical, ground-level execution."
+        ]);
+        // ============================================================================
+        // BEHAVIORAL & SUBCONSCIOUS ABSTRACTIONS (BLOCK 2)
+        // ============================================================================
+
+        // ---------------------------------------------------------
+        // 21. Core Aptitude Vector (Naturally Talented At)
+        // ---------------------------------------------------------
+        // Evaluates the dominant facial third: Upper (Mental/Pyriform), Middle (Motive), Lower (Vital).
+        // The Pyriform face correlates with literary and artistic talent[cite: 1], while the Motive (long) face correlates with physical action[cite: 1].
+        const aptitudeScore = (t1 > t2 && t1 > t3) ? 0.2 : (t2 > t1 && t2 > t3) ? 0.5 : 0.8;
+        traits.coreAptitude = this.scoreTrait10(aptitudeScore + (asymmetryVal * 0.1), 0.1, 1.0, [
+            "Hyper-Mental Aptitude. Extreme natural talent for abstract theory, literature, and isolated artistic creation. Untalented at physical execution.",
+            "Strong Mental Aptitude. Naturally excels in creative, academic, and strategic thinking.",
+            "Mental-Motive Hybrid. Talented at translating abstract concepts into mechanical or operational reality.",
+            "Leaning Mechanical. Aptitude favors structural design, engineering, and logistics.",
+            "Pure Motive Aptitude. Extremely talented in direct physical action, speed, and active execution[cite: 1]. Untalented at passive, desk-bound tasks.",
+            "Motive-Vital Hybrid. Excels at managing physical resources and directing teams.",
+            "Leaning Vital. Natural talent for sales, diplomacy, and resource acquisition.",
+            "Strong Vital Aptitude. Highly talented in commercial trading, socialization, and rapid versatility.",
+            "Extreme Vital Aptitude. Maximum natural talent for public engagement, networking, and rapid situational adaptation.",
+            "Hyper-Vital Aptitude. Purely driven by instinctual social mechanics and environmental absorption."
+        ]);
+
+        // ---------------------------------------------------------
+        // 22. Interpersonal Dynamics (Social Interaction)
+        // ---------------------------------------------------------
+        // Measures facial roundness (Vital temperament) vs angularity. The round face is highly genial and versatile[cite: 1].
+        const socialRatio = faceWidth / faceHeight;
+        traits.interpersonalDynamics = this.scoreTrait10(socialRatio, 0.7, 1.0, [
+            "Extremely Isolationist. Interacts with severe reservation; heavily depletes energy in social environments.",
+            "Highly Guarded. Prefers minimal interaction; highly selective and transactional with social energy.",
+            "Reserved. Default interaction is polite but distant. Keeps strict boundaries.",
+            "Pragmatic Socializer. Interacts effectively when necessary for operational goals.",
+            "Balanced Interpersonal Baseline. Capable of both isolation and active socialization without extreme drain.",
+            "Accessible Baseline. Naturally open to interaction; default stance is approachable.",
+            "Genial & Versatile. Interacts with high elasticity and ease of manner[cite: 1].",
+            "Highly Social. Actively seeks out interaction; processes information best through dialogue.",
+            "Hyper-Extroverted. Interacts continuously; strongly relies on external validation and group dynamics.",
+            "Extreme Vital Socializer. Maximum biological drive for continuous, unrestricted interpersonal engagement."
+        ]);
+
+        // ---------------------------------------------------------
+        // 23. Challenge Resolution (Facing Friction)
+        // ---------------------------------------------------------
+        // Calculates nasal convexity (Combative/Roman baseline). The combative nose indicates a disposition to fight, contend, and argue[cite: 1].
+        const combativeZ = Math.abs(m[6].z - m[168].z);
+        traits.challengeResolution = this.scoreTrait10(combativeZ, 5, 20, [
+            "Total Evasion. Instinctually avoids conflict at all costs; collapses or retreats under direct pressure.",
+            "Highly Defensive. Meets challenges with extreme caution and attempts to subvert rather than confront.",
+            "Defensive/Yielding. Prefers compromise and pacification when facing friction.",
+            "Tactical Evasion. Navigates around challenges rather than breaking through them.",
+            "Measured Resistance. Meets challenges with calculated, proportionate force.",
+            "Direct Resistance. Default stance is to hold ground and defend current positions.",
+            "Combative Baseline. Meets challenges head-on; natural disposition to argue, contend, and conquer[cite: 1].",
+            "Highly Aggressive. Actively attacks impediments; thrives on friction and high-stakes conflict.",
+            "Hyper-Aggressive. Actively seeks out and provokes challenges; utilizes overpowering force.",
+            "Maximum Belligerence. Extreme biological imperative to violently crush any perceived challenge or opposition."
+        ]);
+
+        // ---------------------------------------------------------
+        // 24. Teleological Drive (Aiming for Goals)
+        // ---------------------------------------------------------
+        // Derived from mandibular width and projection. The broad, square chin indicates masterfulness and never giving up[cite: 1].
+        const goalDrive = jawWidth * chinProjection;
+        traits.goalAiming = this.scoreTrait10(goalDrive, 50, 150, [
+            "Apathetic Baseline. Near-zero internal drive for long-term goal acquisition; highly reactive to immediate stimuli.",
+            "Low Tenacity. Abandons goals quickly when faced with sustained friction.",
+            "Variable Drive. Goal pursuit is entirely dependent on fluctuating enthusiasm or external pressure.",
+            "Moderate Tenacity. Capable of achieving short-to-medium term objectives with external structuring.",
+            "Standard Operational Drive. Consistent, average pursuit of established milestones.",
+            "Determined Baseline. Sustains focus on goals despite moderate setbacks.",
+            "High Tenacity. Strongly enduring; pursues objectives with disciplined, long-term focus.",
+            "Masterful Execution. Broad, square-jawed persistence; physically and mentally refuses to yield until the goal is secured[cite: 1].",
+            "Relentless Drive. Hyper-fixated on goal acquisition; will exhaust all biological and environmental resources to win.",
+            "Extreme Teleological Fixation. Maximum biological marker for absolute, unbreakable, and ruthless goal obsession."
+        ]);
+
+        // ---------------------------------------------------------
+        // 25. Daily Operational Baseline (Typical Day)
+        // ---------------------------------------------------------
+        // Synthesizes the structural execution pattern (Motive temperament) versus impulse.
+        const operationalPattern = (faceHeight / jawWidth) * philtrumRatio;
+        traits.typicalDay = this.scoreTrait10(operationalPattern, 0.05, 0.25, [
+            "Pure Chaos. Daily routine is entirely unstructured, impulsive, and dictated by momentary desires.",
+            "Highly Unstructured. Resists schedules; operates entirely on spontaneous bursts of energy.",
+            "Reactive Routine. Day is dictated by external demands rather than internal systemization.",
+            "Loose Framework. Maintains a basic skeleton of a routine but frequently deviates.",
+            "Standard Framework. Balances structured habits with necessary daily flexibility.",
+            "Systematic Baseline. Prefers a predictable, moderately optimized daily flow.",
+            "Highly Structured. Day is tightly scheduled; relies heavily on tracking, data, and optimized habit loops.",
+            "Rigidly Optimized. Typical day is executed with mechanical precision; zero tolerance for operational inefficiency.",
+            "Hyper-Systemized. Entire existence is compartmentalized into strict execution algorithms and spreadsheets.",
+            "Extreme Algorithmic Routine. Maximum biological marker for severe rigidity; absolute deviation panic."
+        ]);
+
+        // ---------------------------------------------------------
+        // 26. Cognitive Capacity (Approximate Intelligence)
+        // ---------------------------------------------------------
+        // Uses Camper's Facial Angle (measuring forehead prominence to upper lip) which historically denotes degrees of intelligence[cite: 1].
+        const facialAngle = this.angleBetween(m[10], m[33], m[152]); // Forehead to nasal root to chin
+        traits.cognitiveCapacity = this.scoreTrait10(facialAngle, 75, 95, [
+            "Severely Diminished Processing. Indicates highly primitive cognitive processing and minimal abstract retention.",
+            "Low Processing Baseline. Concrete, slow-moving cognitive absorption.",
+            "Below Average Capacity. Struggles with complex, multi-layered abstract reasoning.",
+            "Standard Practical Intellect. Functional, everyday cognitive processing. Learns through repetition.",
+            "Average Cognitive Capacity. Standard processing speed and abstract comprehension.",
+            "Above Average Capacity. Quick discernment; easily grasps and applies new conceptual frameworks.",
+            "High Cognitive Processing. Sharp, analytical mind; strong capacity for synthesis and complex problem-solving.",
+            "Superior Intellect. Rapid, highly expansive cognitive capacity; naturally dissects and rebuilds complex systems.",
+            "Exceptional Processing. Near-genius baseline; extreme speed in abstract pattern recognition.",
+            "Maximum Cognitive Synthesis. Extreme biological marker for profound, high-velocity intellectual and theoretical capacity."
+        ]);
+
+        // ---------------------------------------------------------
+        // 27. Deepest Unconscious Fears (Threat Anticipation)
+        // ---------------------------------------------------------
+        // Calculates the dip of the nasal septum (Apprehensive Nose), which indicates a constant state of foreboding and fear[cite: 1].
+        const septumDip = m[2].y - m[1].y; // Nose tip vs septum base
+        traits.unconsciousFears = this.scoreTrait10(septumDip, -2, 5, [
+            "Absolute Fearlessness. Near-total absence of threat anticipation; biologically incapable of foreboding.",
+            "Extremely Low Apprehension. Highly oblivious to environmental or interpersonal dangers.",
+            "Low Apprehension. Rarely anticipates negative outcomes; naturally overly-optimistic.",
+            "Standard Threat Detection. Normal, healthy baseline of situational awareness.",
+            "Balanced Apprehension. Accurately evaluates actual risks without unconscious panic.",
+            "Elevated Caution. Unconsciously scans environments for potential failure points or structural collapse.",
+            "Deep Fear of Betrayal. High unconscious anticipation of interpersonal deceit or system failure.",
+            "Strong Foreboding Baseline. The apprehensive nose structure indicates constant anxiety and fear of the future[cite: 1].",
+            "Severe Unconscious Paranoia. Deeply terrified of total loss of control; constantly modeling worst-case scenarios.",
+            "Extreme Threat Anticipation. Maximum marker for paralyzing unconscious dread and hyper-vigilant paranoia."
+        ]);
+
+        // ---------------------------------------------------------
+        // 28. Deepest Unconscious Desires (Core Drive)
+        // ---------------------------------------------------------
+        // Measures the concavity/indentation of the chin. An indented chin shows a hunger and thirst for affection and the desire to be loved[cite: 1].
+        const chinDesire = Math.abs(m[175].z - m[152].z);
+        traits.unconsciousDesires = this.scoreTrait10(chinDesire, 1, 8, [
+            "Nihilistic Autonomy. Deepest desire is total, absolute isolation and zero dependency on any entity.",
+            "Extreme Independence. Core unconscious drive is to remain entirely untouched and uninfluenced by others.",
+            "Structural Dominance. Unconscious desire is to build and control static systems rather than connect.",
+            "Status & Approval. Deeply desires public recognition and hierarchical superiority.",
+            "Security & Stability. Core drive is absolute environmental and financial predictability.",
+            "Intellectual Supremacy. Unconsciously desires to be universally recognized for cognitive output.",
+            "Slight Affection Drive. Underlying desire for specific, curated interpersonal connection.",
+            "Strong Hunger for Affection. The indented chin indicates a deep, continuous desire to be loved and validated[cite: 1].",
+            "Severe Need for Enmeshment. Unconsciously desires total psychological fusion with another individual.",
+            "Extreme Devotional Thirst. Maximum biological marker for an all-consuming, desperate unconscious drive for absolute love."
+        ]);
+        // ============================================================================
+        // OPERATIONAL & RISK ABSTRACTIONS (BLOCK 3)
+        // ============================================================================
+
+        // ---------------------------------------------------------
+        // 29. Time Management Prediction (Execution Velocity)
+        // ---------------------------------------------------------
+        // Calculates facial length (Motive/Speed) vs. nasal concavity (Snub/Procrastination).
+        const executionVelocity = (faceHeight / faceWidth) - (Math.abs(m[1].z - m[4].z) * 0.5);
+        traits.timeManagement = this.scoreTrait10(executionVelocity, 1.0, 1.8, [
+            "Severe Procrastination Baseline. Mind hesitates and defers action entirely[cite: 1]. Highly unstructured execution.",
+            "High Procrastination. Operates with extreme delay; struggles significantly with direct, timely execution.",
+            "Delayed Execution. Habitually defers tasks; requires intense external deadlines to finalize output.",
+            "Variable Velocity. Execution speed fluctuates based on immediate interest or external pressure.",
+            "Standard Execution Baseline. Normal, practical pacing. Neither hyper-fast nor chronically delayed.",
+            "Consistent Pacing. Reliable and structured approach to time management and task completion.",
+            "Direct Execution. Elevated activity levels; moves through tasks with minimal hesitation.",
+            "High Velocity. Strong directness of movements[cite: 1]. Operates with deliberate, sustained speed.",
+            "Hyper-Kinetic Execution. Highly impatient with delay; executes operations with aggressive rapidity.",
+            "Maximum Execution Velocity. Extreme biological drive for immediate, relentless action and absolute zero latency."
+        ]);
+
+        // ---------------------------------------------------------
+        // 30. Persuasion Perceptibility (Skepticism vs. Credulity)
+        // ---------------------------------------------------------
+        // Measures nasal alar width (Confiding vs Secretive). 
+        const alarWidth = this.dist(m[129], m[358]) / IPD;
+        traits.persuasionPerceptibility = this.scoreTrait10(alarWidth, 0.4, 0.8, [
+            "Extreme Credulity. Highly confiding disposition[cite: 1]. Biologically predisposed to implicitly trust external data and persuasion.",
+            "High Susceptibility. Very easily influenced by environmental sentiment, marketing, and authoritative suggestions.",
+            "Trusting Baseline. Open to persuasion; default stance assumes the validity of presented information.",
+            "Receptive but Grounded. Mildly trusting; requires only standard validation to be persuaded.",
+            "Balanced Perceptibility. Evaluates persuasion logically; standard skepticism baseline.",
+            "Pragmatic Skeptic. Requires solid empirical data before yielding to external influence.",
+            "Guarded Baseline. Default stance is suspicious of motives; naturally resists persuasion tactics.",
+            "Highly Skeptical. Strong secretiveness and concealment[cite: 1]. Deeply distrustful of sales mechanics or behavioral design.",
+            "Severe Skepticism. Near-impervious to persuasion; automatically assumes deception in all external input.",
+            "Absolute Paranoia. Maximum biological marker for total distrust; completely rejects all external influence and persuasion."
+        ]);
+
+        // ---------------------------------------------------------
+        // 31. Risk Tolerance (Volatility Threshold)
+        // ---------------------------------------------------------
+        // Combines nasal bridge projection (Roman/Reckless) and mandibular width (Broad/Daring).
+        const volatilityThreshold = (Math.abs(m[6].z - m[168].z)) * (jawWidth / IPD);
+        traits.riskTolerance = this.scoreTrait10(volatilityThreshold, 5, 25, [
+            "Extreme Risk Aversion. Biologically incapable of handling uncertainty; total panic response to high-stakes volatility.",
+            "Severe Caution. Highly apprehensive; meticulously calculates all variables to avoid any potential loss.",
+            "Risk Averse Baseline. Strongly prefers established, predictable, and heavily guarded operational structures.",
+            "Conservative Operator. Will only accept minimal risk if heavily hedged and logically sound.",
+            "Standard Volatility Threshold. Capable of navigating normal, everyday uncertainties without structural collapse.",
+            "Calculated Risk Taker. Willing to leverage assets or safety if the probability matrix is highly favorable.",
+            "Elevated Risk Appetite. Comfortable operating in uncertain, high-stakes environments.",
+            "High Volatility Tolerance. Shows distinct courage and daring[cite: 1]; actively utilizes risk as a strategic tool.",
+            "Hyper-Risk Appetite. Thrives on extreme volatility; actively seeks out highly uncertain, high-yield scenarios.",
+            "Maximum Recklessness. Exhibits a reckless disregard for personal safety[cite: 1] or asset preservation; absolute biological appetite for gambling."
+        ]);
 
         // Note: For brevity in the immediate UI phase, we've implemented the core 10 metrics.
         // We will expand the final 5 (Eye Depth, Mouth Width, Brow Ridge, Philtrum, Asymmetry) 
