@@ -172,6 +172,7 @@ const TitanHeuristics = {
         // ---------------------------------------------------------
         // 10. Chin Projection (Mentalis / Willpower)
         // ---------------------------------------------------------
+        const chinProjVal = m[152].z - m[2].z;
         traits.chinProjection = this.scoreTrait10((m[152].z - m[2].z), 0, 20, [
             "Severely recessed mentalis. Indicates highly yielding nature and weak follow-through under pressure.",
             "Highly recessed chin. Correlates with capitulation during confrontation.",
@@ -431,7 +432,7 @@ const TitanHeuristics = {
         // 24. Teleological Drive (Aiming for Goals)
         // ---------------------------------------------------------
         // Derived from mandibular width and projection. The broad, square chin indicates masterfulness and never giving up[cite: 1].
-        const goalDrive = jawWidth * chinProjection;
+        const goalDrive = jawWidth * chinProjVal;
         traits.goalAiming = this.scoreTrait10(goalDrive, 50, 150, [
             "Apathetic Baseline. Near-zero internal drive for long-term goal acquisition; highly reactive to immediate stimuli.",
             "Low Tenacity. Abandons goals quickly when faced with sustained friction.",
@@ -467,7 +468,7 @@ const TitanHeuristics = {
         // 26. Cognitive Capacity (Approximate Intelligence)
         // ---------------------------------------------------------
         // Uses Camper's Facial Angle (measuring forehead prominence to upper lip) which historically denotes degrees of intelligence[cite: 1].
-        const facialAngle = this.angleBetween(m[10], m[33], m[152]); // Forehead to nasal root to chin
+        const facialAngle = TitanGeometry.calcAngle(m[10], m[33], m[152]);
         traits.cognitiveCapacity = this.scoreTrait10(facialAngle, 75, 95, [
             "Severely Diminished Processing. Indicates highly primitive cognitive processing and minimal abstract retention.",
             "Low Processing Baseline. Concrete, slow-moving cognitive absorption.",
